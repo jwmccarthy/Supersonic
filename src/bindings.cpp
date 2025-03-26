@@ -26,11 +26,13 @@ public:
         cudaFree(d_envs);
     }
 
-    void step(torch::Tensor actions) {
+    torch::Tensor step(torch::Tensor actions) {
         run_step(d_envs, actions, states);
+        return states;
     }
 
-    torch::Tensor get_states() {
+    torch::Tensor reset() {
+        run_reset(d_envs, states);
         return states;
     }
 };
@@ -39,5 +41,5 @@ PYBIND11_MODULE(supersonic, m) {
     py::class_<EnvironmentManager>(m, "EnvironmentManager")
         .def(py::init<int>())
         .def("step", &EnvironmentManager::step)
-        .def("get_states", &EnvironmentManager::get_states);
+        .def("reset", &EnvironmentManager::reset);
 }

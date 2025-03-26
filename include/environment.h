@@ -4,6 +4,7 @@
 struct Environment {
     float state;
     int step_count;
+    
 #ifdef __CUDACC__
     __device__ void reset() {
         state = 0.0f;
@@ -19,5 +20,6 @@ struct Environment {
 #endif
 };
 
-// Only declare the function here.
 void run_step(Environment* d_envs, torch::Tensor actions, torch::Tensor states);
+
+void run_reset(Environment* d_envs, torch::Tensor states);
