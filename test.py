@@ -6,13 +6,16 @@ envs = ssl.EnvironmentManager(num_envs)
 
 actions = torch.rand(num_envs, device="cuda", dtype=torch.float32)
 
-states = envs.step(actions)
-
-print(states)
+print(actions)
 
 states = envs.reset()
 
 print(states)
 
+for i in range(1000):
+    states = envs.step(actions)
+
+print(states)
+
 print(states.shape)
-print(states.device)  # Should print: cuda:0
+print(states.device)
