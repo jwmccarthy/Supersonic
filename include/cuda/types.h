@@ -6,6 +6,7 @@
 struct alignas(16) CudaVec {
     float x, y, z, _w;
 
+    // Constructors
     __host__ __device__ CudaVec() : x(0), y(0), z(0), _w(0) {}
     __host__ __device__ CudaVec(float x, float y, float z, float _w = 0) : x(x), y(y), z(z), _w(_w) {}
 
@@ -43,21 +44,65 @@ struct alignas(16) CudaVec {
     __host__ __device__ float operator[](int index) const;
 
     // Helper functions
-    bool IsZero() const;
-    CudaVec To2D() const;
+    __host__ __device__ bool IsZero() const;
+    __host__ __device__ CudaVec To2D() const;
 
     // Vector properties
-    float LengthSq() const;
-    float Length() const;
-    float LengthSq2D() const;
-    float Length2D() const;
-    CudaVec Normalized() const;
+    __host__ __device__ float LengthSq() const;
+    __host__ __device__ float Length() const;
+    __host__ __device__ float LengthSq2D() const;
+    __host__ __device__ float Length2D() const;
+    __host__ __device__ CudaVec Normalized() const;
 
     // Vector operations
-    float Dot(const CudaVec& other) const;
-    float DistSq(const CudaVec& other) const;
-    float Dist(const CudaVec& other) const;
-    float DistSq2D(const CudaVec& other) const;
-    float Dist2D(const CudaVec& other) const;
-    CudaVec Cross(const CudaVec& other) const;
+    __host__ __device__ float Dot(const CudaVec& other) const;
+    __host__ __device__ float DistSq(const CudaVec& other) const;
+    __host__ __device__ float Dist(const CudaVec& other) const;
+    __host__ __device__ float DistSq2D(const CudaVec& other) const;
+    __host__ __device__ float Dist2D(const CudaVec& other) const;
+    __host__ __device__ CudaVec Cross(const CudaVec& other) const;
+};
+
+
+struct alignas(16) CudaRotMat {
+    CudaVec f, r, u;
+
+    __host__ __device__ CudaRotMat()
+    __host__ __device__ CudaRotMat(CudaVec f, CudaVec r, CudaVec u) : f(f), r(r), u(u) {}
+
+    __host__ __device__ static CudaRotMat GetIdentity();
+    __host__ __device__ static CudaRotMat LookAt();
+
+    // Basic operations
+    __host__ __device__ CudaRotMat operator+(const CudaRotMat& other) const;
+    __host__ __device__ CudaRotMat operator-(const CudaRotMat& other) const;
+    __host__ __device__ CudaRotMat operator*(const CudaRotMat& other) const;
+    __host__ __device__ CudaRotMat operator/(const CudaRotMat& other) const;
+
+    // In-place basic operations
+    __host__ __device__ CudaRotMat operator+=(const CudaRotMat& other);
+    __host__ __device__ CudaRotMat operator-=(const CudaRotMat& other);
+    __host__ __device__ CudaRotMat operator*=(const CudaRotMat& other);
+    __host__ __device__ CudaRotMat operator/=(const CudaRotMat& other);
+
+    // Scalar operations
+    __host__ __device__ CudaRotMat operator*(float scalar) const;
+    __host__ __device__ CudaRotMat operator/(float scalar) const;
+
+    // In-place scalar operations
+    __host__ __device__ CudaRotMat operator*=(float scalar);
+    __host__ __device__ CudaRotMat operator/=(float scalar);
+
+    // Comparison operations
+    __host__ __device__ bool operator==(const CudaRotMat& other) const;
+    __host__ __device__ bool operator!=(const CudaRotMat& other) const;
+
+    // Indexing
+    __host__ __device__ CudaVec& operator[](int index);
+    __host__ __device__ CudaVec operator[](int index) const;
+
+    // Vector/Matrix operations
+    __host__ __device__ CudaVec Dot(const CudaVec& vec) const;
+    __host__ __device__ CudaRotMat Dot(const CudaRotMat& other) const;
+    __host__ __device__ CudaRotMat Transpose() const;
 };
