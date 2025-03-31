@@ -9,8 +9,8 @@ setup(
         CUDAExtension(
             name="supersonic",
             sources=[
-                "src/bindings.cpp",
-                "src/environment.cu",
+                "src/Bindings.cpp",
+                "src/Bnvironment.cu",
             ],
             include_dirs=["include"],
             libraries=["cudart"],

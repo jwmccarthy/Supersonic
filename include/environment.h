@@ -1,4 +1,5 @@
 #pragma once
+
 #include <torch/extension.h>
 
 struct Environment {

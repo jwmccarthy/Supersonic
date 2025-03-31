@@ -1,4 +1,4 @@
-#include "environment.h"
+#include "Environment.h"
 
 __global__ void step_kernel(Environment* envs, float* actions, float* states, int num_envs) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;

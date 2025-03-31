@@ -1,7 +1,7 @@
 #include <torch/extension.h>
 #include <pybind11/pybind11.h>
 #include <cuda_runtime.h>  // Needed for cudaMalloc, cudaMemset, cudaFree
-#include "environment.h"
+#include "Environment.h"
 
 namespace py = pybind11;
 
