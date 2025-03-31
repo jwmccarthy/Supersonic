@@ -1,6 +1,5 @@
 #include "MathTypes.h"
 
-
 // CUDA vector class implementation
 
 // Vector operation macros

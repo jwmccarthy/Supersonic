@@ -3,7 +3,6 @@
 #include <cuda_runtime.h>
 #include "CudaCommon.h"
 
-
 struct alignas(16) CudaVec {
     float x, y, z, _w;
 
@@ -65,11 +64,10 @@ struct alignas(16) CudaVec {
     CUDA_BOTH CudaVec Cross(const CudaVec& other) const;
 };
 
-
 struct alignas(16) CudaRotMat {
     CudaVec f, r, u;
 
-    CUDA_BOTH CudaRotMat()
+    CUDA_BOTH CudaRotMat();
     CUDA_BOTH CudaRotMat(CudaVec f, CudaVec r, CudaVec u) 
         : f(f), r(r), u(u) {}
 
@@ -109,7 +107,6 @@ struct alignas(16) CudaRotMat {
     CUDA_BOTH CudaRotMat Dot(const CudaRotMat& other) const;
     CUDA_BOTH CudaRotMat Transpose() const;
 };
-
 
 struct CudaAngle {
     float yaw, pitch, roll;
