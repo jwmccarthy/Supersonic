@@ -10,7 +10,7 @@ setup(
             name="supersonic",
             sources=[
                 "src/Bindings.cpp",
-                "src/Bnvironment.cu",
+                "src/Environment.cu",
             ],
             include_dirs=["include"],
             libraries=["cudart"],
