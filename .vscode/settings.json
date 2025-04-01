@@ -1,3 +1,12 @@
 {
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "disabled",
+    "files.associations": {
+        "__bit_reference": "cpp",
+        "deque": "cpp",
+        "iterator": "cpp",
+        "string": "cpp",
+        "atomic": "cpp",
+        "chrono": "cpp",
+        "cstdint": "cpp"
+    }
 }

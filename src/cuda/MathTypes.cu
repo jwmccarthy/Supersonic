@@ -1,4 +1,5 @@
 #include "MathTypes.h"
+#include <assert.h>
 
 // CUDA vector class implementation
 
@@ -9,7 +10,7 @@
     } \
     CUDA_BOTH CudaVec& CudaVec::operator op##=(const CudaVec& other) { \
         return *this = *this op other; \
-    } \
+    }
 
 // Scalar operation macros
 #define DEFINE_VEC_OP_FLT(op) \
@@ -18,10 +19,7 @@
     } \
     CUDA_BOTH CudaVec& CudaVec::operator op##=(float scalar) { \
         return *this = *this op scalar; \
-    } \
-    CUDA_BOTH CudaVec operator op(float scalar, const CudaVec& vec) { \
-        return CudaVec(scalar op vec.x, scalar op vec.y, scalar op vec.z); \
-    } \
+    }
 
 // Basic + In-place vector operations
 DEFINE_VEC_OP_VEC(+)
@@ -56,12 +54,12 @@ CUDA_BOTH CudaVec CudaVec::operator-() const {
 }
 
 // Indexing
-CUDA_BOTH float& CudaVec::operator[](int index) {
+CUDA_BOTH float& CudaVec::operator[](uint32_t index) {
     assert(index >= 0 && index < 3);
     return ((float*)this)[index];
 }
 
-CUDA_BOTH const float& CudaVec::operator[](int index) const {
+CUDA_BOTH float CudaVec::operator[](uint32_t index) const {
     assert(index >= 0 && index < 3);
     return ((float*)this)[index];
 }
@@ -114,7 +112,7 @@ CUDA_BOTH float CudaVec::Dot(const CudaVec& other) const {
 }
 
 CUDA_BOTH float CudaVec::DistSq(const CudaVec& other) const {
-    (*this - other).LengthSq();
+    return (*this - other).LengthSq();
 }
 
 CUDA_BOTH float CudaVec::Dist(const CudaVec& other) const {
@@ -131,12 +129,12 @@ CUDA_BOTH float CudaVec::Dist2D(const CudaVec& other) const {
     return sqrtf(DistSq2D(other));
 }
 
-CUDA_BOTH CudaVec Cross(const CudaVec& other) const {
+CUDA_BOTH CudaVec CudaVec::Cross(const CudaVec& other) const {
     return CudaVec(
         y * other.z - z * other.y,
         z * other.x - x * other.z,
         x * other.y - y * other.x
-    )
+    );
 }
 
 

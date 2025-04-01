@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdint.h>
 #include <cuda_runtime.h>
 #include "CudaCommon.h"
 
@@ -18,18 +19,18 @@ struct alignas(16) CudaVec {
     CUDA_BOTH CudaVec operator/(const CudaVec& other) const;
 
     // In-place basic operations
-    CUDA_BOTH CudaVec operator+=(const CudaVec& other);
-    CUDA_BOTH CudaVec operator-=(const CudaVec& other);
-    CUDA_BOTH CudaVec operator*=(const CudaVec& other);
-    CUDA_BOTH CudaVec operator/=(const CudaVec& other);
+    CUDA_BOTH CudaVec& operator+=(const CudaVec& other);
+    CUDA_BOTH CudaVec& operator-=(const CudaVec& other);
+    CUDA_BOTH CudaVec& operator*=(const CudaVec& other);
+    CUDA_BOTH CudaVec& operator/=(const CudaVec& other);
 
     // Scalar operations
     CUDA_BOTH CudaVec operator*(float scalar) const;
     CUDA_BOTH CudaVec operator/(float scalar) const;
 
     // In-place scalar operations
-    CUDA_BOTH CudaVec operator*=(float scalar);
-    CUDA_BOTH CudaVec operator/=(float scalar);
+    CUDA_BOTH CudaVec& operator*=(float scalar);
+    CUDA_BOTH CudaVec& operator/=(float scalar);
 
     // Comparison operations
     CUDA_BOTH bool operator==(const CudaVec& other) const;
@@ -41,8 +42,8 @@ struct alignas(16) CudaVec {
     CUDA_BOTH CudaVec operator-() const;
 
     // Indexing
-    CUDA_BOTH float& operator[](int index);
-    CUDA_BOTH float operator[](int index) const;
+    CUDA_BOTH float& operator[](uint32_t index);
+    CUDA_BOTH float operator[](uint32_t index) const;
 
     // Helper functions
     CUDA_BOTH bool IsZero() const;
@@ -81,18 +82,18 @@ struct alignas(16) CudaRotMat {
     CUDA_BOTH CudaRotMat operator/(const CudaRotMat& other) const;
 
     // In-place basic operations
-    CUDA_BOTH CudaRotMat operator+=(const CudaRotMat& other);
-    CUDA_BOTH CudaRotMat operator-=(const CudaRotMat& other);
-    CUDA_BOTH CudaRotMat operator*=(const CudaRotMat& other);
-    CUDA_BOTH CudaRotMat operator/=(const CudaRotMat& other);
+    CUDA_BOTH CudaRotMat& operator+=(const CudaRotMat& other);
+    CUDA_BOTH CudaRotMat& operator-=(const CudaRotMat& other);
+    CUDA_BOTH CudaRotMat& operator*=(const CudaRotMat& other);
+    CUDA_BOTH CudaRotMat& operator/=(const CudaRotMat& other);
 
     // Scalar operations
     CUDA_BOTH CudaRotMat operator*(float scalar) const;
     CUDA_BOTH CudaRotMat operator/(float scalar) const;
 
     // In-place scalar operations
-    CUDA_BOTH CudaRotMat operator*=(float scalar);
-    CUDA_BOTH CudaRotMat operator/=(float scalar);
+    CUDA_BOTH CudaRotMat& operator*=(float scalar);
+    CUDA_BOTH CudaRotMat& operator/=(float scalar);
 
     // Comparison operations
     CUDA_BOTH bool operator==(const CudaRotMat& other) const;
