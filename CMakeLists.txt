@@ -15,7 +15,7 @@ find_package(Torch REQUIRED)
 pybind11_add_module(supersonic
     pybind/Supersonic.cpp
     src/Environment.cu
-    src/cuda/MathTypes.cu
+    src/MathTypes.cu
 )
 
 target_include_directories(supersonic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
