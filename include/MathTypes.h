@@ -42,8 +42,8 @@ struct alignas(16) CudaVec {
     CUDA_BOTH CudaVec operator-() const;
 
     // Indexing
-    CUDA_BOTH float& operator[](uint32_t index);
-    CUDA_BOTH float operator[](uint32_t index) const;
+    CUDA_BOTH float& operator[](int index);
+    CUDA_BOTH float operator[](int index) const;
 
     // Helper functions
     CUDA_BOTH bool IsZero() const;
@@ -73,19 +73,15 @@ struct alignas(16) CudaRotMat {
         : f(f), r(r), u(u) {}
 
     CUDA_BOTH static CudaRotMat GetIdentity();
-    CUDA_BOTH static CudaRotMat LookAt();
+    CUDA_BOTH static CudaRotMat LookAt(CudaVec _f, CudaVec _u);
 
     // Basic operations
     CUDA_BOTH CudaRotMat operator+(const CudaRotMat& other) const;
     CUDA_BOTH CudaRotMat operator-(const CudaRotMat& other) const;
-    CUDA_BOTH CudaRotMat operator*(const CudaRotMat& other) const;
-    CUDA_BOTH CudaRotMat operator/(const CudaRotMat& other) const;
 
     // In-place basic operations
     CUDA_BOTH CudaRotMat& operator+=(const CudaRotMat& other);
     CUDA_BOTH CudaRotMat& operator-=(const CudaRotMat& other);
-    CUDA_BOTH CudaRotMat& operator*=(const CudaRotMat& other);
-    CUDA_BOTH CudaRotMat& operator/=(const CudaRotMat& other);
 
     // Scalar operations
     CUDA_BOTH CudaRotMat operator*(float scalar) const;
