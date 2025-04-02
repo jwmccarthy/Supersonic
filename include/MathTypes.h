@@ -74,6 +74,7 @@ struct alignas(16) CudaRotMat {
 
     CUDA_BOTH static CudaRotMat GetIdentity();
     CUDA_BOTH static CudaRotMat LookAt(CudaVec _f, CudaVec _u);
+    CUDA_BOTH static CudaRotMat EulerYPR(float y, float p, float r);
 
     // Basic operations
     CUDA_BOTH CudaRotMat operator+(const CudaRotMat& other) const;
