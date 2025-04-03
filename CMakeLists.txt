@@ -14,10 +14,11 @@ set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-rdc=true")
 find_package(pybind11 REQUIRED)
 find_package(Torch REQUIRED)
 
+file(GLOB SOURCES "src/*.cu" "src/*.cpp")
+
 pybind11_add_module(supersonic
     pybind/Supersonic.cpp
-    src/Environment.cu
-    src/MathTypes.cu
+    ${SOURCES}
 )
 
 target_include_directories(supersonic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

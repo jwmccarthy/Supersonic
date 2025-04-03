@@ -1,9 +1,9 @@
-#include "Constants.h"
+#include "CudaMath.h"
 #include "MathTypes.h"
 #include <assert.h>
 
 CUDA_BOTH CudaRotMat::CudaRotMat() {
-    f, r, u = CudaVec();
+    f = r = u = CudaVec();
 }
 
 CUDA_BOTH CudaRotMat CudaRotMat::GetIdentity() {
@@ -18,8 +18,9 @@ CUDA_BOTH CudaRotMat CudaRotMat::LookAt(CudaVec _f, CudaVec _u) {
     CudaVec
         f = _f.Normalized(),
         r = _u.Cross(f),
-        u = f.Cross(r).Normalized(),
-        r = u.Cross(f).Normalized();
+        u = f.Cross(r).Normalized();
+
+    r = u.Cross(f).Normalized();
 
     return CudaRotMat(f, r, u);
 }
