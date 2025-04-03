@@ -11,7 +11,7 @@ CUDA_BOTH CudaAngle CudaAngle::FromRotMat(CudaRotMat& mat) {
         r = Atan2f(mat[1].z, mat[2].z);
 
     // prevent gimbal lock
-    if (Fabs(p) == HALF_PI) {
+    if (Fabsf(p) == HALF_PI) {
         y += (y > 0) ? -PI : PI;
         r += (r > 0) ? -PI : PI;
     }
@@ -76,4 +76,38 @@ CUDA_BOTH CudaVec CudaAngle::GetForwardVec() const {
         sinPitch * sinYaw,
         -sinPitch
     );
+}
+
+CUDA_BOTH void CudaAngle::NormalizeFix() {
+    yaw = WrapNormalizeFloat(yaw, PI);
+    pitch = WrapNormalizeFloat(pitch, HALF_PI);
+    roll = WrapNormalizeFloat(roll, PI);
+}
+
+CUDA_BOTH CudaAngle CudaAngle::GetDeltaTo(const CudaAngle& other) const {
+    CudaAngle delta(
+        other.yaw - yaw,
+        other.pitch - pitch,
+        other.roll - roll
+    );
+    delta.NormalizeFix();
+    return delta;
+}
+
+CUDA_BOTH bool CudaAngle::operator==(const CudaAngle& other) const {
+    return (yaw == other.yaw) && (pitch == other.pitch) && (roll == other.roll);
+}
+
+CUDA_BOTH CudaAngle CudaAngle::operator+(const CudaAngle& other) const {
+    CudaAngle combined(
+        other.yaw + yaw, 
+        other.pitch + pitch, 
+        other.roll + roll
+    );
+    combined.NormalizeFix();
+    return combined;
+}
+
+CUDA_BOTH CudaAngle CudaAngle::operator-(const CudaAngle& other) const {
+    return other.GetDeltaTo(*this);
 }

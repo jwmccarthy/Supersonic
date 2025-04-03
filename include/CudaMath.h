@@ -11,8 +11,12 @@ namespace CudaMath {
         return (val < min) ? min : (val > max) ? max : val;
     }
 
-    CUDA_BOTH inline float Fabs(const float x) {
+    CUDA_BOTH inline float Fabsf(const float x) {
         return fabsf(x);
+    }
+
+    CUDA_BOTH inline float Fmodf(const float x, const float y) {
+        return fmodf(x, y);
     }
 
     CUDA_BOTH inline float Sinf(const float x) {
@@ -38,4 +42,6 @@ namespace CudaMath {
     CUDA_BOTH inline float Atan2f(const float x, const float y) {
         return atan2f(x, y);
     }
+
+    CUDA_BOTH float WrapNormalizeFloat(const float val, const float minmax);
 }
