@@ -106,7 +106,7 @@ struct alignas(16) CudaRotMat {
     CUDA_BOTH CudaRotMat Transpose() const;
 };
 
-struct CudaAngle {
+struct alignas(16) CudaAngle {
     float yaw, pitch, roll;
 
     CUDA_BOTH CudaAngle(float yaw = 0, float pitch = 0, float roll = 0) 
@@ -131,4 +131,27 @@ struct CudaAngle {
     // Comparison operations
     CUDA_BOTH bool operator==(const CudaAngle& other) const;
     CUDA_BOTH bool operator!=(const CudaAngle& other) const;
+};
+
+struct alignas(16) CudaTransform {
+    CudaRotMat rotation;
+    CudaVec translation;
+
+    CUDA_BOTH CudaTransform() {}
+    CUDA_BOTH CudaTransform(const CudaRotMat& r, const CudaVec& t = CudaVec(0, 0, 0))
+        : rotation(r), translation(t) {}
+
+    CUDA_BOTH static CudaTransform GetIdentity();
+
+    // Transform compositions
+    CUDA_BOTH CudaTransform operator*(const CudaTransform& other) const;
+    CUDA_BOTH CudaTransform& operator*=(const CudaTransform& other);
+
+    // Comparison operators
+    CUDA_BOTH bool operator==(const CudaTransform& other) const;
+    CUDA_BOTH bool operator!=(const CudaTransform& other) const;
+
+    // Transforms
+    CUDA_BOTH CudaTransform Inverse() const;
+    CUDA_BOTH CudaVec InverseTransform(const CudaVec& vec) const;
 };

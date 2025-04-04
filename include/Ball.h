@@ -12,11 +12,4 @@ struct BallState : public PhysicsState {
     CUDA_BOTH BallState() : PhysicsState() {
         pos.z = RLConst::BALL_REST_Z;
     }
-
-    CUDA_BOTH bool Matches(
-        const BallState& other, 
-        const float marginPos = 0.8f,
-        const float marginVel = 0.4f,
-        const float marginAngVel = 0.02f
-    ) const;
 };
