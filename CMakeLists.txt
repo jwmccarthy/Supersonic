@@ -21,7 +21,10 @@ pybind11_add_module(supersonic
     ${SOURCES}
 )
 
-target_include_directories(supersonic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(supersonic 
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/bullet
+)
 
 find_library(TORCH_PYTHON_LIBRARY torch_python PATH "${TORCH_INSTALL_PREFIX}/lib")
 target_link_libraries(supersonic PRIVATE ${TORCH_LIBRARIES} ${TORCH_PYTHON_LIBRARY})

@@ -48,6 +48,8 @@ struct alignas(16) CudaVec {
     // Helper functions
     CUDA_BOTH bool IsZero() const;
     CUDA_BOTH CudaVec To2D() const;
+    CUDA_BOTH static CudaVec Min(const CudaVec& a, const CudaVec& b);
+    CUDA_BOTH static CudaVec Max(const CudaVec& a, const CudaVec& b);
 
     // Vector properties
     CUDA_BOTH float LengthSq() const;

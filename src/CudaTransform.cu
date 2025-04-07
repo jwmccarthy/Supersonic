@@ -13,7 +13,7 @@ CUDA_BOTH CudaTransform CudaTransform::operator*(const CudaTransform& other) con
 }
 
 CUDA_BOTH CudaTransform& CudaTransform::operator*=(const CudaTransform& other) {
-    *this = *this * other;
+    return *this = *this * other;
 }
 
 // Comparison operators

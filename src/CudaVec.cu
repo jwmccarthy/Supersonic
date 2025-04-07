@@ -62,13 +62,29 @@ CUDA_BOTH float CudaVec::operator[](int index) const {
     return ((float*)this)[index];
 }
 
-// Helper functions
+// Helper functions 
 CUDA_BOTH bool CudaVec::IsZero() const {
     return (x == 0.0f) && (y == 0.0f) && (z == 0.0f);
 }
 
 CUDA_BOTH CudaVec CudaVec::To2D() const {
     return CudaVec(x, y, 0.0f);
+}
+
+CUDA_BOTH CudaVec CudaVec::Min(const CudaVec& a, const CudaVec& b) {
+    return CudaVec(
+        a.x < b.x ? a.x : b.x,
+        a.y < b.y ? a.y : b.y,
+        a.z < b.z ? a.z : b.z
+    );
+}
+
+CUDA_BOTH CudaVec CudaVec::Max(const CudaVec& a, const CudaVec& b) {
+    return CudaVec(
+        a.x < b.x ? b.x : a.x,
+        a.y < b.y ? b.y : a.y,
+        a.z < b.z ? b.z : a.z
+    );
 }
 
 // Vector properties

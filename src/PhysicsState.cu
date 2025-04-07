@@ -2,7 +2,7 @@
 
 CUDA_BOTH PhysicsState PhysicsState::GetInvertedY() const {
     // Invert X and Y, preserve Z
-    static const CudaVec INVERT_SCALE(-1, -1, 1);
+    const CudaVec INVERT_SCALE(-1, -1, 1);
 
     PhysicsState inverted = *this;
     
