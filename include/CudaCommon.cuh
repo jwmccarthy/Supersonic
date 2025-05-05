@@ -8,7 +8,7 @@
 #define CUDA_HD __host__ __device__
 
 // General error checking for CUDA memory operations
-void check(cudaError_t err, const char* const func, const char* const file, 
+inline void check(cudaError_t err, const char* const func, const char* const file, 
            const int line) 
 {
     if (err == cudaSuccess) return;
