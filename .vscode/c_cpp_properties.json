@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${env:CONDA_PREFIX}/envs/rlenv/lib/python3.11/site-packages/torch/include/**",
+                "${env:CONDA_PREFIX}/envs/rlenv/lib/python3.11/site-packages/torch/include/torch/csrc/api/include/**",
+                "${env:CONDA_PREFIX}/envs/rlenv/include/python3.11/**",
+                "/usr/local/cuda-12.8/include/**",
+                "/usr/local/cuda-12.8/targets/x86_64-linux/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

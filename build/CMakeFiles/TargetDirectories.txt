@@ -1,0 +1,4 @@
+/root/dev/Supersonic/build/CMakeFiles/supersonic.dir
+/root/dev/Supersonic/build/CMakeFiles/test_exe.dir
+/root/dev/Supersonic/build/CMakeFiles/edit_cache.dir
+/root/dev/Supersonic/build/CMakeFiles/rebuild_cache.dir
