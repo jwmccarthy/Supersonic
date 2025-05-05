@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "__config": "cpp",
-        "memory_resource": "cpp",
-        "bitset": "cpp",
-        "chrono": "cpp",
-        "algorithm": "cpp"
-    }
-}
