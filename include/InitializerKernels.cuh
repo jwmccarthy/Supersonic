@@ -8,16 +8,6 @@
 #include "GameState.cuh"
 #include "RLConstants.cuh"
 
-__global__ void seedKernel(GameState* state, ulong seed) {
-    int simIdx = blockIdx.x;
-    if (simIdx >= state->simCount) return;
+__global__ void seedKernel(GameState* state, ulong seed);
 
-    curand_init(seed, simIdx, 0, &state->rngStates[simIdx]);
-}
-
-__global__ void resetToKickoffKernel(GameState* state) {
-    int simIdx = blockIdx.x;
-    if (simIdx >= state->simCount) return;
-
-    resetToKickoff(state, simIdx);
-}
+__global__ void resetToKickoffKernel(GameState* state);

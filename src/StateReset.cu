@@ -73,7 +73,7 @@ __device__ void resetToKickoff(GameState* state, int simIdx) {
     const int nBlue   = state->numBlueCars;
     const int nOrange = state->numOrangeCars;
     const int nTotal  = state->carsPerSim;
-    const int baseIdx = simIdx * state->carsPerSim;
+    const int baseIdx = simIdx * nTotal;
 
     // Reset ball to center
     resetBall(state, simIdx);
