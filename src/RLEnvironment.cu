@@ -1,18 +1,20 @@
-#include <torch/extension.h>
-
 #include "InitializerKernels.cuh"
 #include "RLEnvironment.cuh"
 
-RLEnvironment::RLEnvironment(int sims, int blues, int oranges) :
-    m_state(sims, blues, oranges)
+RLEnvironment::RLEnvironment(int sims, int blues, int oranges, uint64_t seed) :
+    m_state(sims, blues, oranges, seed)
 {
-    m_wasResetByUser = false;  // Require reset before first step
+    // Set grid for initialization kernels
+    int blockSize = 256;
+    int gridSize = (m_state.view()->simCount + blockSize - 1) / blockSize;
 
-    // Set initial ball position
+    // Initialize random seed
+    seedKernel<<<gridSize, blockSize>>>(m_state.view(), seed);
+    cudaDeviceSynchronize();
 
-    // Set random initial car positions
-
-    // Set car state
+    // Initialize ball and cars at kickoff locations
+    resetToKickoffKernel<<<gridSize, blockSize>>>(m_state.view());
+    cudaDeviceSynchronize();
 
     // Activate boost pads
 

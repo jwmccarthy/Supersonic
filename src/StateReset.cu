@@ -43,7 +43,7 @@ __device__ void resetCar(GameState* state, int carIdx, const CarSpawn loc, bool 
     state->carIsDemolished[carIdx]    = false;
 }
 
-__device__ void shuffleKickoffIndices(curandState_t &st, int* locations, int teamSize) {
+__device__ void shuffleKickoffIndices(curandState_t &st, int* kickoffIndices, int teamSize) {
     // Clamp teamSize
     if (teamSize > NUM_KICKOFF_LOCATIONS) {
         teamSize = NUM_KICKOFF_LOCATIONS;
@@ -60,11 +60,11 @@ __device__ void shuffleKickoffIndices(curandState_t &st, int* locations, int tea
         // “Old” value at j
         // If we wrote it earlier (j < i), use locations[j],
         // Otherwise it’s just j.
-        int val_j = (j < i ? locations[j] : j);
+        int val_j = (j < i ? kickoffIndices[j] : j);
 
         // Swap i, j (untouched i implicitly equals i)
-        locations[i] = val_j;
-        locations[j] = i;
+        kickoffIndices[i] = val_j;
+        kickoffIndices[j] = i;
     }
     // now locations[0...teamSize-1] is a unique random sample
 }

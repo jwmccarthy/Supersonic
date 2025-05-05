@@ -30,10 +30,10 @@ public:
         CUDA_CHECK(cudaMemcpy(dst, m_ptr, m_size, cudaMemcpyDeviceToHost));
     }
 
-    T*       data()         { return m_ptr; }
-    T*       data()   const { return m_ptr; }
-    size_t   length() const { return m_length; }
-    size_t   size()   const { return m_size; }
+    T*     data()         { return m_ptr; }
+    T*     data()   const { return m_ptr; }
+    size_t length() const { return m_length; }
+    size_t size()   const { return m_size; }
 
 private:
     T*     m_ptr;

@@ -75,6 +75,7 @@ struct __align__(16) GameState {
     int numBlueCars;
     int numOrangeCars;
     int carsPerSim;
+    int randomSeed;
 
     #define VIEW_FIELD(type, name, count) \
         type name;

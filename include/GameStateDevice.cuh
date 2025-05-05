@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <type_traits>
 
 #include "DeviceArray.cuh"
@@ -12,6 +13,9 @@ private:
     int m_numBlueCars;
     int m_numOrangeCars;
     int m_carsPerSim;
+    uint64_t m_randomSeed;
+
+    GameState m_view;
 
     // Declare DeviceArray for each field
     #define DECLARE_FIELD(type, name, count) \
@@ -20,8 +24,8 @@ private:
     #undef DECLARE_FIELD
 
 public:
-    GameStateDevice(int sims, int blues, int oranges);
-    GameState view() const;
+    GameStateDevice(int sims, int blues, int oranges, uint64_t seed);
+    GameState* view();
 
     inline int getPhysicsStateLength() const {
         int totalFloats = 0;

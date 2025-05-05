@@ -16,20 +16,35 @@ find_package(Torch REQUIRED)
 
 file(GLOB SOURCES "src/*.cu" "src/*.cpp")
 
-# Python module
-pybind11_add_module(supersonic
-    # pybind/Supersonic.cpp
-    ${SOURCES}
-)
+# # Python module
+# pybind11_add_module(supersonic
+#     # pybind/Supersonic.cpp
+#     ${SOURCES}
+# )
 
-target_include_directories(supersonic 
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+# target_include_directories(supersonic 
+#     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+# )
 
-find_library(TORCH_PYTHON_LIBRARY torch_python PATH "${TORCH_INSTALL_PREFIX}/lib")
-target_link_libraries(supersonic PRIVATE ${TORCH_LIBRARIES} ${TORCH_PYTHON_LIBRARY})
+# find_library(TORCH_PYTHON_LIBRARY torch_python PATH "${TORCH_INSTALL_PREFIX}/lib")
+# target_link_libraries(supersonic PRIVATE ${TORCH_LIBRARIES} ${TORCH_PYTHON_LIBRARY})
+
+# Find Python using the conda environment path
+set(PYTHON_INCLUDE_DIR "/root/miniconda3/envs/rlenv/include/python3.11")
+set(PYTHON_LIBRARY "/root/miniconda3/envs/rlenv/lib/libpython3.11.so")
 
 # Test executable
-add_executable(test_exe src/test.cu)
-target_include_directories(test_exe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set_target_properties(test_exe PROPERTIES OUTPUT_NAME "test")
+add_executable(test_exe ${SOURCES})
+target_include_directories(test_exe PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${TORCH_INCLUDE_DIRS}
+    ${PYTHON_INCLUDE_DIR}
+)
+target_link_libraries(test_exe PRIVATE 
+    ${TORCH_LIBRARIES}
+    ${PYTHON_LIBRARY}
+)
+set_target_properties(test_exe PROPERTIES 
+    OUTPUT_NAME "test"
+    CUDA_SEPARABLE_COMPILATION ON
+)

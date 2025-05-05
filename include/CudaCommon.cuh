@@ -3,10 +3,6 @@
 #include <iostream>
 #include <cuda_runtime.h>
 
-#define CUDA_H  __host__
-#define CUDA_D  __device__
-#define CUDA_HD __host__ __device__
-
 // General error checking for CUDA memory operations
 inline void check(cudaError_t err, const char* const func, const char* const file, 
            const int line) 
