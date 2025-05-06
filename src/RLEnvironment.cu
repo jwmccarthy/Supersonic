@@ -6,7 +6,7 @@ RLEnvironment::RLEnvironment(int sims, int blues, int oranges, uint64_t seed) :
 {
     // Set grid for initialization kernels
     int blockSize = 256;
-    int gridSize = (m_state.view()->simCount + blockSize - 1) / blockSize;
+    int gridSize = (sims + blockSize - 1) / blockSize;
 
     // Initialize random seed
     seedKernel<<<gridSize, blockSize>>>(m_state.view(), seed);

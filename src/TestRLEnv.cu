@@ -9,13 +9,16 @@
 
 // Simple print kernel to verify memory
 __global__ void printStateKernel(GameState* state) {
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        // Just print the first ball position
-        printf("Ball position (from device): (%f, %f, %f)\n", 
-               state->ballPosition[0].x,
-               state->ballPosition[0].y,
-               state->ballPosition[0].z);
-    }
+    int carIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (carIdx >= state->simCount * state->carsPerSim) return;
+
+    // Just print the first ball position
+    printf("%d: Car position (from device): (%f, %f, %f)\n",
+            carIdx, 
+            state->carPosition[threadIdx.x].x,
+            state->carPosition[threadIdx.x].y,
+            state->carPosition[threadIdx.x].z
+    );
 }
 
 int main() {
@@ -26,9 +29,9 @@ int main() {
         cudaFree(0);
         
         // Parameters
-        const int simCount = 4;  // Keep this small for testing
-        const int blueCars = 1;
-        const int orangeCars = 1;
+        const int simCount = 2;  // Keep this small for testing
+        const int blueCars = 3;
+        const int orangeCars = 3;
         const uint64_t seed = 12345;
         
         std::cout << "Creating GameStateDevice..." << std::endl;
@@ -41,15 +44,6 @@ int main() {
         
         // Get the state pointer
         GameState* stateView = state.view();
-        
-        // Verify basic properties
-        std::cout << "State properties: " << std::endl;
-        std::cout << "  Sim count: " << stateView->simCount << std::endl;
-        std::cout << "  Blue cars: " << stateView->numBlueCars << std::endl;
-        std::cout << "  Orange cars: " << stateView->numOrangeCars << std::endl;
-        
-        // Manually launch the kernels
-        std::cout << "\nInitializing random seeds..." << std::endl;
         
         int blockSize = 64;
         int gridSize = (simCount + blockSize - 1) / blockSize;
@@ -99,8 +93,8 @@ int main() {
         std::cout << "Successfully reset to kickoff positions" << std::endl;
         
         // Print the first ball position from the device
-        std::cout << "\nVerifying ball position from device:" << std::endl;
-        printStateKernel<<<1, 1>>>(stateView);
+        std::cout << "\nVerifying car position from device:" << std::endl;
+        printStateKernel<<<gridSize, blockSize>>>(stateView);
         cudaDeviceSynchronize();
         
         // Read ball positions from device
@@ -108,8 +102,7 @@ int main() {
         
         // We'll check a few of the ball positions
         float4 ballPositions[4];
-        cudaMemcpy(ballPositions, stateView->ballPosition, 
-                   simCount * sizeof(float4), cudaMemcpyDeviceToHost);
+        state.ballPosition.download(ballPositions);
         
         for (int i = 0; i < simCount; i++) {
             std::cout << "  Sim " << i << ": ("

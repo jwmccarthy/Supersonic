@@ -49,24 +49,18 @@ __device__ void shuffleKickoffIndices(curandState_t &st, int* kickoffIndices, in
         teamSize = NUM_KICKOFF_LOCATIONS;
     }
 
+    // Initialize indices
+    for (int i = 0; i < NUM_KICKOFF_LOCATIONS; i++) {
+        kickoffIndices[i] = i;
+    }
+
     // Fisher-Yates initialize & shuffle
     for (int i = 0; i < teamSize; ++i) {
-        int remaining = NUM_KICKOFF_LOCATIONS - i;
-
-        // Get random offset in [0, remaining-1]
-        int offset = curand(&st) % remaining;
-        int j = i + offset;
-
-        // “Old” value at j
-        // If we wrote it earlier (j < i), use locations[j],
-        // Otherwise it’s just j.
-        int val_j = (j < i ? kickoffIndices[j] : j);
-
-        // Swap i, j (untouched i implicitly equals i)
-        kickoffIndices[i] = val_j;
-        kickoffIndices[j] = i;
+        int j = i + (curand(&st) % (NUM_KICKOFF_LOCATIONS - i));
+        int temp = kickoffIndices[i];
+        kickoffIndices[i] = kickoffIndices[j];
+        kickoffIndices[j] = temp;
     }
-    // now locations[0...teamSize-1] is a unique random sample
 }
 
 __device__ void resetToKickoff(GameState* state, int simIdx) {
@@ -87,14 +81,17 @@ __device__ void resetToKickoff(GameState* state, int simIdx) {
     // Reset blue & orange cars
     for (int i = 0; i < nTotal; i++) {
         int carIdx = baseIdx + i;
-        int kickoffIdx = kickoffIndices[i];
-        bool invertLoc = (i >= nBlue);
+        bool orange = (i >= nBlue);
+
+        // Reset index to mirror blue location
+        int carSpawnIdx = orange ? (i - nBlue) : i;
+        int kickoffIdx = kickoffIndices[carSpawnIdx];
 
         // Get location from randomized index
         const CarSpawn location = KICKOFF_LOCATIONS[kickoffIdx];
         
         // Reset car to associated random location
-        resetCar(state, carIdx, location, invertLoc);
+        resetCar(state, carIdx, location, orange);
     }
 
     state->rngStates[simIdx] = st;  // Write back for continued use

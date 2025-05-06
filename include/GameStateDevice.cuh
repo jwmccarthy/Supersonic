@@ -15,16 +15,19 @@ private:
     int m_carsPerSim;
     uint64_t m_randomSeed;
 
-    GameState m_view;
-
-    // Declare DeviceArray for each field
-    #define DECLARE_FIELD(type, name, count) \
-        DeviceArray<std::remove_pointer_t<type>> name;
-    GAMESTATE_FIELDS(DECLARE_FIELD,,)
-    #undef DECLARE_FIELD
+    GameState h_view;
+    GameState* d_view = nullptr;
 
 public:
     GameStateDevice(int sims, int blues, int oranges, uint64_t seed);
+    ~GameStateDevice();
+
+    // Declare DeviceArray for each field
+    #define DECLARE_FIELD(type, name, count) \
+    DeviceArray<std::remove_pointer_t<type>> name;
+    GAMESTATE_FIELDS(DECLARE_FIELD,,)
+    #undef DECLARE_FIELD
+
     GameState* view();
 
     inline int getPhysicsStateLength() const {
