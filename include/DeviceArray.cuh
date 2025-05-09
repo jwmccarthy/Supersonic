@@ -25,9 +25,29 @@ public:
         CUDA_CHECK(cudaMemcpy(m_ptr, src, m_size, cudaMemcpyHostToDevice));
     }
 
+    void upload(const T* src, cudaStream_t stream) {
+        if (!m_ptr || !src) return;
+        CUDA_CHECK(cudaMemcpyAsync(m_ptr, src, m_size, cudaMemcpyHostToDevice, stream));
+    }
+
     void download(T* dst) {
         if (!m_ptr || !dst) return;
         CUDA_CHECK(cudaMemcpy(dst, m_ptr, m_size, cudaMemcpyDeviceToHost));
+    }
+
+    void download(const T* dst, cudaStream_t stream) {
+        if (!m_ptr || !dst) return;
+        CUDA_CHECK(cudaMemcpyAsync(dst, m_ptr, m_size, cudaMemcpyDeviceToHost, stream));
+    }
+
+    void setValue(T val) {
+        if (!m_ptr) return;
+        CUDA_CHECK(cudaMemset(m_ptr, val, m_size));
+    }
+
+    void setValue(T val, cudaStream_t stream) {
+        if (!m_ptr) return;
+        CUDA_CHECK(cudaMemsetAsync(m_ptr, val, m_size, stream));
     }
 
     T*     data()         { return m_ptr; }

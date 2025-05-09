@@ -67,8 +67,8 @@
     X(float*,          carDemoCooldown,        SIMS * CARS)           \
                                                                       \
     /* --- Boost pads (per-sim * 34 pads) ----------------------- */  \
-    X(bool*,           boostPadIsActive,       SIMS * NUM_BOOST_PADS) \
-    X(float*,          boostPadCooldown,       SIMS * NUM_BOOST_PADS)
+    X(bool*,           boostPadIsActive,       SIMS * TOTAL_NUM_BOOSTS) \
+    X(float*,          boostPadCooldown,       SIMS * TOTAL_NUM_BOOSTS)
 
 struct __align__(16) GameState {
     int simCount;
@@ -81,4 +81,19 @@ struct __align__(16) GameState {
         type name;
     GAMESTATE_FIELDS(VIEW_FIELD, simCount, carsPerSim)
     #undef VIEW_FIELD
+
+    __host__ __device__ __forceinline__ 
+    int getCarOffset(int simIdx, int carIdx = 0) const {
+        return simIdx * carsPerSim + carIdx;
+    }
+
+    __host__ __device__ __forceinline__ 
+    int getWheelOffset(int simIdx, int carIdx = 0, int wheelIdx = 0) const {
+        return simIdx * carsPerSim * NUM_WHEELS + carIdx * NUM_WHEELS + wheelIdx;
+    }
+
+    __host__ __device__ __forceinline__
+    int getBoostPadOffset(int simIdx, int padIdx = 0) const {
+        return simIdx * TOTAL_NUM_BOOSTS + padIdx;
+    }
 };

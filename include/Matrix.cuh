@@ -31,7 +31,7 @@ struct __device__ __align__(16) Mat3 {
 
 			// Right vector
 			Vec3{cy * sp * sr - sy * cr,
-				 sy * sp * sr - cy * cr,
+				 sy * sp * sr + cy * cr,
 				 cp * sr},
 
 			// Up vector

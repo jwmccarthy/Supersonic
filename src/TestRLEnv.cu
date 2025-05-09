@@ -10,7 +10,7 @@
 // Simple print kernel to verify memory
 __global__ void printStateKernel(GameState* state) {
     int carIdx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (carIdx >= state->simCount * state->carsPerSim) return;
+    if (carIdx >= 5) return;
 
     // Just print the first ball position
     printf("%d: Car position (from device): (%f, %f, %f)\n",
@@ -18,6 +18,30 @@ __global__ void printStateKernel(GameState* state) {
             state->carPosition[threadIdx.x].x,
             state->carPosition[threadIdx.x].y,
             state->carPosition[threadIdx.x].z
+    );
+
+    // Just print the first ball position
+    printf("%d: Car rotation F (from device): (%f, %f, %f)\n",
+            carIdx, 
+            state->carRotationF[threadIdx.x].x,
+            state->carRotationF[threadIdx.x].y,
+            state->carRotationF[threadIdx.x].z
+    );
+
+    // Just print the first ball position
+    printf("%d: Car rotation R (from device): (%f, %f, %f)\n",
+            carIdx, 
+            state->carRotationR[threadIdx.x].x,
+            state->carRotationR[threadIdx.x].y,
+            state->carRotationR[threadIdx.x].z
+    );
+
+    // Just print the first ball position
+    printf("%d: Car rotation U (from device): (%f, %f, %f)\n",
+            carIdx, 
+            state->carRotationU[threadIdx.x].x,
+            state->carRotationU[threadIdx.x].y,
+            state->carRotationU[threadIdx.x].z
     );
 }
 

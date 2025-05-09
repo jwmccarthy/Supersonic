@@ -2,8 +2,6 @@
 
 GameStateDevice::GameStateDevice(int sims, int blues, int oranges, uint64_t seed) :
     m_simCount(sims),
-    m_numBlueCars(blues),
-    m_numOrangeCars(oranges),
     m_carsPerSim(blues + oranges),
     m_randomSeed(seed)
 {
@@ -15,14 +13,14 @@ GameStateDevice::GameStateDevice(int sims, int blues, int oranges, uint64_t seed
 
     // Create POD view of state
     h_view.simCount = m_simCount;
-    h_view.numBlueCars = m_numBlueCars;
-    h_view.numOrangeCars = m_numOrangeCars;
+    h_view.numBlueCars = blues;
+    h_view.numOrangeCars = oranges;
     h_view.carsPerSim = m_carsPerSim;
     h_view.randomSeed = m_randomSeed;
 
     // Set pointers to device array memory
     #define SETPTR_FIELD(type, name, count) \
-    h_view.name = name.data();
+        h_view.name = name.data();
     GAMESTATE_FIELDS(SETPTR_FIELD,,)
     #undef SETPTR_FIELD
 
@@ -35,8 +33,4 @@ GameStateDevice::GameStateDevice(int sims, int blues, int oranges, uint64_t seed
 
 GameStateDevice::~GameStateDevice() {
     if (d_view) CUDA_CHECK(cudaFree(d_view));
-}
-
-GameState* GameStateDevice::view() {
-    return d_view;
 }
