@@ -29,18 +29,18 @@ __device__ void resetCar(GameState* state, int carIdx, const CarSpawn loc, bool 
     state->carRotationU[carIdx] = yawRot.u.v;
 
     // Reset car properties
-    state->carVelocity[carIdx]        = make_float4(0, 0, 0, 0);
-    state->carAngularVelocity[carIdx] = make_float4(0, 0, 0, 0);
-    state->carBoostAmount[carIdx]     = SPAWN_BOOST_AMOUNT;
-    state->carDemolishTimer[carIdx]   = 0.0f;
-    state->carDemoCooldown[carIdx]    = 0.0f;
-    state->carIsOnGround[carIdx]      = true;
-    state->carIsSupersonic[carIdx]    = false;
-    state->carHasJumped[carIdx]       = false;
-    state->carHasDoubleJumped[carIdx] = false;
-    state->carIsFlipping[carIdx]      = false;
-    state->carIsBoosting[carIdx]      = false;
-    state->carIsDemolished[carIdx]    = false;
+    state->carVelocity[carIdx]        = CAR_RESET_DEFAULTS.velocity;
+    state->carAngularVelocity[carIdx] = CAR_RESET_DEFAULTS.angularVelocity;
+    state->carBoostAmount[carIdx]     = CAR_RESET_DEFAULTS.boostAmount;
+    state->carDemolishTimer[carIdx]   = CAR_RESET_DEFAULTS.demolishTimer;
+    state->carDemoCooldown[carIdx]    = CAR_RESET_DEFAULTS.demoCooldown;
+    state->carIsOnGround[carIdx]      = CAR_RESET_DEFAULTS.isOnGround;
+    state->carIsSupersonic[carIdx]    = CAR_RESET_DEFAULTS.isSupersonic;
+    state->carHasJumped[carIdx]       = CAR_RESET_DEFAULTS.hasJumped;
+    state->carHasDoubleJumped[carIdx] = CAR_RESET_DEFAULTS.hasDoubleJumped;
+    state->carIsFlipping[carIdx]      = CAR_RESET_DEFAULTS.isFlipping;
+    state->carIsBoosting[carIdx]      = CAR_RESET_DEFAULTS.isBoosting;
+    state->carIsDemolished[carIdx]    = CAR_RESET_DEFAULTS.isDemolished;
 }
 
 __device__ void shuffleKickoffIndices(curandState_t &st, int* kickoffIndices, int teamSize) {
