@@ -54,7 +54,7 @@ __device__ void shuffleKickoffIndices(curandState_t &st, int* kickoffIndices, in
         kickoffIndices[i] = i;
     }
 
-    // Fisher-Yates initialize & shuffle
+    // Fisher-Yates index shuffle
     for (int i = 0; i < teamSize; ++i) {
         int j = i + (curand(&st) % (NUM_KICKOFF_LOCATIONS - i));
         int temp = kickoffIndices[i];
