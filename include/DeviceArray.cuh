@@ -8,6 +8,11 @@ template<typename T>
 class DeviceArray {
 public:
     DeviceArray() : m_ptr(nullptr), m_size(0), m_length(0) {}
+    DeviceArray(const std::vector<T>& h_vec) {
+        allocate(h_vec.size());
+        upload(h_vec.data());
+    }
+
     ~DeviceArray() { free(); }
 
     void allocate(size_t n) {

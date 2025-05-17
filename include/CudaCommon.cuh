@@ -5,7 +5,7 @@
 
 // General error checking for CUDA memory operations
 inline void check(cudaError_t err, const char* const func, const char* const file, 
-           const int line) 
+                  const int line) 
 {
     if (err == cudaSuccess) return;
 
@@ -18,4 +18,4 @@ inline void check(cudaError_t err, const char* const func, const char* const fil
 #define CUDA_CHECK(val) check((val), #val, __FILE__, __LINE__)
 
 // Helpers for CUDA type initialization
-__device__ inline float4 zero4() { return make_float4(0, 0, 0, 0); }
+__device__ inline float3 zero4() { return make_float3(0, 0, 0); }

@@ -29,8 +29,8 @@ __global__ void updateBallPhysicsKernel(GameState* state, float dt) {
     if (simIdx >= state->simCount) return;
     
     // Get current ball state
-    float4 position = state->ballPosition[simIdx];
-    float4 velocity = state->ballVelocity[simIdx];
+    float3 position = state->ballPosition[simIdx];
+    float3 velocity = state->ballVelocity[simIdx];
     
     // Apply gravity to velocity
     velocity.z += GRAVITY * dt;
@@ -106,7 +106,7 @@ int main() {
         
         // Set the balls to an initial height for better bounce visualization
         // Create a temporary buffer for all ball positions
-        std::vector<float4> ballPositions(simCount);
+        std::vector<float3> ballPositions(simCount);
         state.ballPosition.download(ballPositions.data());
         
         // Modify the heights and add some random x,y velocities to make them more varied
@@ -127,7 +127,7 @@ int main() {
         state.ballPosition.upload(ballPositions.data());
         
         // Set initial velocities
-        std::vector<float4> ballVelocities(simCount, make_float4(0.0f, 0.0f, -100.0f, 0.0f));
+        std::vector<float3> ballVelocities(simCount, make_float3(0.0f, 0.0f, -100.0f, 0.0f));
         
         // Set various velocities for different simulations except the first one
         for (int i = 1; i < simCount; i++) {
@@ -147,7 +147,7 @@ int main() {
                  << ballPositions[0].z << " for " << simulationTime << " seconds..." << std::endl;
         
         // Vector to store position data for output (only for the first simulation)
-        std::vector<float4> positionHistory;
+        std::vector<float3> positionHistory;
         
         // Main simulation loop
         const int stepsPerSecond = 120;  // 120 Hz physics
@@ -172,7 +172,7 @@ int main() {
             // Download position every frame (only tracking the first simulation)
             if (step % 1 == 0) {
                 // Download all ball positions
-                std::vector<float4> allPositions(simCount);
+                std::vector<float3> allPositions(simCount);
                 state.ballPosition.download(allPositions.data());
                 
                 // Only keep the first simulation's position

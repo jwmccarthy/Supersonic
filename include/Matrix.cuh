@@ -3,7 +3,7 @@
 #include "Vector.cuh"
 #include "CudaCommon.cuh"
 
-struct __device__ __align__(16) Mat3 {
+struct __align__(16) Mat3 {
 	Vec3 f, r, u;  // column vectors
 
 	// Constructors

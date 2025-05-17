@@ -1,9 +1,17 @@
 #pragma once
 
+#include <vector>
+#include <fstream>
+
 #include "CudaCommon.cuh"
 
-/*
-Read in mesh with DataStream
-Put in CUDA texture memory for fast read-only access across threads
-Constant broad phase grid can contain reference to texture memory
-*/
+struct ArenaMesh {
+    int numVertices; 
+    int numTriangles;
+
+    // Mesh info w/ keywords for LDG
+    const int3*   __restrict__ triangles;
+    const float3* __restrict__ vertices;
+
+    static ArenaMesh* createOnDevice(const std::string& path);
+};

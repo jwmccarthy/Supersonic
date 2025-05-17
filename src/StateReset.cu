@@ -2,14 +2,14 @@
 
 __device__ void resetBall(GameState* state, int simIdx) {
     // Reset ball to be motionless at center of field
-    state->ballPosition[simIdx] = make_float4(0, 0, BALL_REST_Z, 0);
-    state->ballVelocity[simIdx] = make_float4(0, 0, 0, 0);
-    state->ballAngularVelocity[simIdx] = make_float4(0, 0, 0, 0);
+    state->ballPosition[simIdx] = make_float3(0, 0, BALL_REST_Z, 0);
+    state->ballVelocity[simIdx] = make_float3(0, 0, 0, 0);
+    state->ballAngularVelocity[simIdx] = make_float3(0, 0, 0, 0);
 
     // Set ball rotation to identity
-    state->ballRotationF[simIdx] = make_float4(1, 0, 0, 0);
-    state->ballRotationR[simIdx] = make_float4(0, 1, 0, 0);
-    state->ballRotationU[simIdx] = make_float4(0, 0, 1, 0);
+    state->ballRotationF[simIdx] = make_float3(1, 0, 0, 0);
+    state->ballRotationR[simIdx] = make_float3(0, 1, 0, 0);
+    state->ballRotationU[simIdx] = make_float3(0, 0, 1, 0);
 }
 
 __device__ void resetCar(GameState* state, int carIdx, const CarSpawn loc, bool invert) {
@@ -20,7 +20,7 @@ __device__ void resetCar(GameState* state, int carIdx, const CarSpawn loc, bool 
       yaw = invert ? -loc.yaw : loc.yaw;
 
     // Set car position
-    state->carPosition[carIdx] = make_float4(x, y, CAR_REST_Z, 0);
+    state->carPosition[carIdx] = make_float3(x, y, CAR_REST_Z, 0);
 
     // Set car rotation
     auto yawRot = Mat3::FromEulerAngles(yaw, 0, 0);
@@ -29,8 +29,8 @@ __device__ void resetCar(GameState* state, int carIdx, const CarSpawn loc, bool 
     state->carRotationU[carIdx] = yawRot.u.v;
 
     // Reset car properties
-    state->carVelocity[carIdx]        = make_float4(0, 0, 0, 0);
-    state->carAngularVelocity[carIdx] = make_float4(0, 0, 0, 0);
+    state->carVelocity[carIdx]        = make_float3(0, 0, 0, 0);
+    state->carAngularVelocity[carIdx] = make_float3(0, 0, 0, 0);
     state->carBoostAmount[carIdx]     = SPAWN_BOOST_AMOUNT;
     state->carDemolishTimer[carIdx]   = 0.0f;
     state->carDemoCooldown[carIdx]    = 0.0f;
@@ -54,7 +54,7 @@ __device__ void shuffleKickoffIndices(curandState_t &st, int* kickoffIndices, in
         kickoffIndices[i] = i;
     }
 
-    // Fisher-Yates index shuffle
+    // Fisher-Yates initialize & shuffle
     for (int i = 0; i < teamSize; ++i) {
         int j = i + (curand(&st) % (NUM_KICKOFF_LOCATIONS - i));
         int temp = kickoffIndices[i];
