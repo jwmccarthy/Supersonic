@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CudaCommon.cuh"
-#include "ReadMeshObj.cuh"
+#include "LoadMeshObj.cuh"
 
 struct Triangle {
     float4 v0, v1, v2;
@@ -21,14 +21,14 @@ private:
     int m_numCellsY;
     int m_numCellsZ;
 
-    float4 m_gridMinCorner;
     float4 m_gridExtents;
+    float4 m_gridMinCorner;
 
     // Triangle mesh data (CSR format)
-    const float4* __restrict__ m_vertices        {nullptr};
-    const int4*   __restrict__ m_triangles       {nullptr};
-    const int*    __restrict__ m_cellOffsets     {nullptr};
-    const int*    __restrict__ m_triangleIndices {nullptr};
+    const float4* __restrict__ m_vertices;
+    const int4*   __restrict__ m_triangles;
+    const int*    __restrict__ m_cellOffsets;
+    const int*    __restrict__ m_triIndices;
 
     __device__ int4 worldToCell(float4 point) const;
 

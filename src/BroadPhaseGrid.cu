@@ -8,8 +8,22 @@ BroadPhaseGrid::BroadPhaseGrid(const std::string &meshPath,
     m_numCellsY(cellsY),
     m_numCellsZ(cellsZ)
 {
-    Mesh mesh;
-    loadMeshObj(meshPath, mesh);
+    // Minimum corner of arena extent
+    m_gridMinCorner = make_float4(-arenaX, 
+                                  -arenaY, 
+                                  -arenaZ, 0);
+
+    // Full arena extents (given half-extents)
+    m_gridExtents = make_float4(arenaX * 2,
+                                arenaY * 2,
+                                arenaZ * 2, 0);
+
+    // Read mesh data
+    std::vector<float4> vertices;
+    std::vector<int4>   triangles;
+    loadMeshObj(meshPath, vertices, triangles);
+
+    // 
 }
 
 __device__ int4 BroadPhaseGrid::worldToCell(float4 point) const {
@@ -39,7 +53,7 @@ __device__ void BroadPhaseGrid::forEachTriangle(float4 aabbMin, float4 aabbMax, 
         int triangleEnd   = m_cellOffsets[cellIdx + 1];
 
         for (int i = triangleStart; i < triangleEnd; ++i) {
-            int triIdx = m_triangleIndices[i];
+            int triIdx = m_triIndices[i];
 
             int4 vertexIdx = m_triangles[triIdx];
 

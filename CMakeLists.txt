@@ -34,32 +34,17 @@ set(PYTHON_INCLUDE_DIR "/root/miniconda3/envs/rlenv/include/python3.11")
 set(PYTHON_LIBRARY "/root/miniconda3/envs/rlenv/lib/libpython3.11.so")
 
 # Main Test executable
-# add_executable(test_exe ${SOURCES})
-# target_include_directories(test_exe PRIVATE 
-#     ${CMAKE_CURRENT_SOURCE_DIR}/include
-#     ${TORCH_INCLUDE_DIRS}
-#     ${PYTHON_INCLUDE_DIR}
-# )
-# target_link_libraries(test_exe PRIVATE 
-#     ${TORCH_LIBRARIES}
-#     ${PYTHON_LIBRARY}
-# )
-# set_target_properties(test_exe PROPERTIES 
-#     OUTPUT_NAME "test"
-#     CUDA_SEPARABLE_COMPILATION ON
-# )
-
-# Ball Bounce Test executable 
-add_executable(ball_bounce_test src/TestBallBounce.cu src/AABB.cu src/InitializerKernels.cu src/StateReset.cu src/GameStateDevice.cu)
-target_include_directories(ball_bounce_test PRIVATE 
+add_executable(mesh_test ${SOURCES})
+target_include_directories(mesh_test PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${TORCH_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_DIR}
 )
-target_link_libraries(ball_bounce_test PRIVATE 
+target_link_libraries(mesh_test PRIVATE 
     ${TORCH_LIBRARIES}
     ${PYTHON_LIBRARY}
 )
-set_target_properties(ball_bounce_test PROPERTIES
+set_target_properties(mesh_test PROPERTIES 
+    OUTPUT_NAME "test"
     CUDA_SEPARABLE_COMPILATION ON
 )
