@@ -44,7 +44,7 @@ constexpr int NUM_SMALL_BOOSTS = 28;
 constexpr int NUM_LARGE_BOOSTS = 6;
 constexpr int TOTAL_NUM_BOOSTS = NUM_SMALL_BOOSTS + NUM_LARGE_BOOSTS;
 
-__device__ constexpr float3 SMALL_BOOST_LOCATIONS[NUM_SMALL_BOOSTS] = {
+__device__ constexpr float4 SMALL_BOOST_LOCATIONS[NUM_SMALL_BOOSTS] = {
     {     0, -4240, 70, 0 },
     { -1792, -4184, 70, 0 },
     {  1792, -4184, 70, 0 },
@@ -75,7 +75,7 @@ __device__ constexpr float3 SMALL_BOOST_LOCATIONS[NUM_SMALL_BOOSTS] = {
     {     0,  4240, 70, 0 }
 };
 
-__device__ constexpr float3 LARGE_BOOST_LOCATIONS[NUM_LARGE_BOOSTS] = {
+__device__ constexpr float4 LARGE_BOOST_LOCATIONS[NUM_LARGE_BOOSTS] = {
     { -3584,     0, 73, 0 },
     {  3584,     0, 73, 0 },
     { -3072,  4096, 73, 0 },

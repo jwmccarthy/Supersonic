@@ -6,12 +6,12 @@
 #include "CudaCommon.cuh"
 
 struct __align__(16) Vec3 {
-    float3 v;
+    float4 v;
 
     // Constructors
-    __device__ Vec3()                          : v{0, 0, 0} {}
-    __device__ Vec3(float x, float y, float z) : v{x, y, z} {}
-    __device__ Vec3(const float3 f)            : v{f.x, f.y, f.z} {}
+    __device__ Vec3()                          : v{0, 0, 0, 0} {}
+    __device__ Vec3(float x, float y, float z) : v{x, y, z, 0} {}
+    __device__ Vec3(const float4 f)            : v{f.x, f.y, f.z, 0} {}
 
     // Component accessors
     __device__ inline float x() const { return v.x; }

@@ -33,7 +33,7 @@ RLEnvironment::RLEnvironment(int sims, int blues, int oranges, uint64_t seed) :
     printf("Initializing tensor output buffer...\n");
     auto tensorOpts = torch::TensorOptions()
         .device(torch::kCUDA)
-        .dtype(torch::kFloat32);
+        .dtype(torch::kfloat42);
     m_output = torch::empty({outputSize}, tensorOpts);
     m_output.record_stream(m_stream);
 

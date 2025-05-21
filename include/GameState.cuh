@@ -16,22 +16,22 @@
     X(curandState_t*,  rngStates,              SIMS)                    \
                                                                         \
     /* --------------- Ball state (1 per sim) ---------------------- */ \
-    X(float3*,         ballPosition,           SIMS)                    \
-    X(float3*,         ballVelocity,           SIMS)                    \
-    X(float3*,         ballAngularVelocity,    SIMS)                    \
-    X(float3*,         ballRotationF,          SIMS)                    \
-    X(float3*,         ballRotationR,          SIMS)                    \
-    X(float3*,         ballRotationU,          SIMS)                    \
+    X(float4*,         ballPosition,           SIMS)                    \
+    X(float4*,         ballVelocity,           SIMS)                    \
+    X(float4*,         ballAngularVelocity,    SIMS)                    \
+    X(float4*,         ballRotationF,          SIMS)                    \
+    X(float4*,         ballRotationR,          SIMS)                    \
+    X(float4*,         ballRotationU,          SIMS)                    \
                                                                         \
     /* --------------- Car kinematics (CARS per sim) --------------- */ \
-    X(float3*,         carPosition,            SIMS * CARS)             \
-    X(float3*,         carVelocity,            SIMS * CARS)             \
-    X(float3*,         carAngularVelocity,     SIMS * CARS)             \
+    X(float4*,         carPosition,            SIMS * CARS)             \
+    X(float4*,         carVelocity,            SIMS * CARS)             \
+    X(float4*,         carAngularVelocity,     SIMS * CARS)             \
                                                                         \
     /* --------------- Car rotation (CARS per sim) ----------------- */ \
-    X(float3*,         carRotationF,           SIMS * CARS)             \
-    X(float3*,         carRotationR,           SIMS * CARS)             \
-    X(float3*,         carRotationU,           SIMS * CARS)             \
+    X(float4*,         carRotationF,           SIMS * CARS)             \
+    X(float4*,         carRotationR,           SIMS * CARS)             \
+    X(float4*,         carRotationU,           SIMS * CARS)             \
                                                                         \
     /* --------------- Car identifiers (CARS per sim) -------------- */ \
     X(bool*,           carTeam,                SIMS * CARS)             \

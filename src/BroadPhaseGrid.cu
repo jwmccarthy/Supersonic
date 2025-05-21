@@ -1,9 +1,21 @@
+#include "Math.cuh"
 #include "BroadPhaseGrid.cuh"
 
-__device__ int3 BroadPhaseGrid::worldToCell(float3 point) const {
-    int x = static_cast<int>((point.x - m_gridMinCorner.x) / m_cellDimensions.x);
-    int y = static_cast<int>((point.y - m_gridMinCorner.y) / m_cellDimensions.y);
-    int z = static_cast<int>((point.z - m_gridMinCorner.z) / m_cellDimensions.z);
+BroadPhaseGrid::BroadPhaseGrid(const std::string &meshPath,
+                               int cellsX, int cellsY, int cellsZ,
+                               float arenaX, float arenaY, float arenaZ)
+:   m_numCellsX(cellsX),
+    m_numCellsY(cellsY),
+    m_numCellsZ(cellsZ)
+{
+    Mesh mesh;
+    loadMeshObj(meshPath, mesh);
+}
+
+__device__ int4 BroadPhaseGrid::worldToCell(float4 point) const {
+    int x = static_cast<int>((point.x - m_gridMinCorner.x) / m_gridExtents.x);
+    int y = static_cast<int>((point.y - m_gridMinCorner.y) / m_gridExtents.y);
+    int z = static_cast<int>((point.z - m_gridMinCorner.z) / m_gridExtents.z);
 
     x = clamp(x, 0, m_numCellsX - 1);
     y = clamp(y, 0, m_numCellsY - 1);
@@ -13,9 +25,9 @@ __device__ int3 BroadPhaseGrid::worldToCell(float3 point) const {
 }
 
 template <typename Func>
-__device__ void BroadPhaseGrid::forEachTriangle(float3 aabbMin, float3 aabbMax, Func&& func) const  {
-    int3 startCell = worldToCell(aabbMin);
-    int3 endCell   = worldToCell(aabbMax);
+__device__ void BroadPhaseGrid::forEachTriangle(float4 aabbMin, float4 aabbMax, Func&& func) const  {
+    int4 startCell = worldToCell(aabbMin);
+    int4 endCell   = worldToCell(aabbMax);
 
     for (int cellX = startCell.x; cellX <= endCell.x; ++cellX)
     for (int cellY = startCell.y; cellY <= endCell.y; ++cellY)
@@ -29,7 +41,7 @@ __device__ void BroadPhaseGrid::forEachTriangle(float3 aabbMin, float3 aabbMax, 
         for (int i = triangleStart; i < triangleEnd; ++i) {
             int triIdx = m_triangleIndices[i];
 
-            int3 vertexIdx = m_triangles[triIdx];
+            int4 vertexIdx = m_triangles[triIdx];
 
             Triangle triangle {
                 m_vertices[vertexIdx.x],

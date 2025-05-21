@@ -125,7 +125,7 @@ int main() {
         std::cout << "\nVerifying ball positions from host:" << std::endl;
         
         // We'll check a few of the ball positions
-        float3 ballPositions[4];
+        float4 ballPositions[4];
         state.ballPosition.download(ballPositions);
         
         for (int i = 0; i < simCount; i++) {
