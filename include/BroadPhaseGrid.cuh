@@ -21,8 +21,13 @@ private:
     int m_numCellsY;
     int m_numCellsZ;
 
-    float4 m_gridExtents;
+    // Grid extents
     float4 m_gridMinCorner;
+    float4 m_gridMaxCorner;
+    float4 m_gridFullExtent;
+
+    // Pre-compute inverse cell size
+    float4 m_invCellSize;
 
     // Triangle mesh data (CSR format)
     const float4* __restrict__ m_vertices;
@@ -30,9 +35,15 @@ private:
     const int*    __restrict__ m_cellOffsets;
     const int*    __restrict__ m_triIndices;
 
-    __device__ int4 worldToCell(float4 point) const;
+    // Host function for computing per-cell triangle indices
+    void buildSpatialGrid(const std::vector<float4>& vertices,
+                          const std::vector<int4>& triangles,
+                          std::vector<int>& cellOffsets,
+                          std::vector<int>& triIndices);
 
-    __device__ inline int flattenIndex(int x, int y, int z) const {
+    // Cell indexing helpers
+    __host__ __device__ inline int4 worldToCell(float4 point) const;
+    __host__ __device__ inline int flattenIndex(int x, int y, int z) const {
         return x * (m_numCellsY * m_numCellsZ) + y * m_numCellsZ + z;
     }
 };

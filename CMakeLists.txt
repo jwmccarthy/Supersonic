@@ -14,27 +14,25 @@ set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-rdc=true")
 find_package(pybind11 REQUIRED)
 find_package(Torch REQUIRED)
 
-file(GLOB SOURCES "src/*.cu" "src/*.cpp")
-
-# # Python module
-# pybind11_add_module(supersonic
-#     # pybind/Supersonic.cpp
-#     ${SOURCES}
-# )
-
-# target_include_directories(supersonic 
-#     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
-# )
-
-# find_library(TORCH_PYTHON_LIBRARY torch_python PATH "${TORCH_INSTALL_PREFIX}/lib")
-# target_link_libraries(supersonic PRIVATE ${TORCH_LIBRARIES} ${TORCH_PYTHON_LIBRARY})
-
 # Find Python using the conda environment path
 set(PYTHON_INCLUDE_DIR "/root/miniconda3/envs/rlenv/include/python3.11")
 set(PYTHON_LIBRARY "/root/miniconda3/envs/rlenv/lib/libpython3.11.so")
 
+# Common source files (excluding test files)
+file(GLOB COMMON_SOURCES 
+    "src/AABB.cu"
+    "src/ArenaMesh.cu"
+    "src/BroadPhaseGrid.cu"
+    "src/GameStateDevice.cu"
+    "src/InitializerKernels.cu"
+    "src/LoadMeshObj.cu"
+    "src/PhysicsKernels.cu"
+    "src/RLEnvironment.cu"
+    "src/StateReset.cu"
+)
+
 # Main Test executable
-add_executable(mesh_test ${SOURCES})
+add_executable(mesh_test ${COMMON_SOURCES} "src/TestMesh.cu")
 target_include_directories(mesh_test PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${TORCH_INCLUDE_DIRS}
@@ -46,5 +44,21 @@ target_link_libraries(mesh_test PRIVATE
 )
 set_target_properties(mesh_test PROPERTIES 
     OUTPUT_NAME "test"
+    CUDA_SEPARABLE_COMPILATION ON
+)
+
+# BroadPhaseGrid Test executable
+add_executable(grid_test ${COMMON_SOURCES} "src/TestBroadPhaseGrid.cu")
+target_include_directories(grid_test PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${TORCH_INCLUDE_DIRS}
+    ${PYTHON_INCLUDE_DIR}
+)
+target_link_libraries(grid_test PRIVATE 
+    ${TORCH_LIBRARIES}
+    ${PYTHON_LIBRARY}
+)
+set_target_properties(grid_test PROPERTIES 
+    OUTPUT_NAME "grid_test"
     CUDA_SEPARABLE_COMPILATION ON
 )
