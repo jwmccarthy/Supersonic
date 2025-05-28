@@ -18,7 +18,7 @@ bool loadMeshObj(const std::string &path,
         if (line[0] == 'v' && line[1] == ' ') {
             float x, y, z;
             if (std::sscanf(line.c_str() + 2, "%f %f %f", &x, &y, &z) == 3) {
-                vertices.push_back(float4{ x, y, z });
+                vertices.push_back(float4{ y, x, z });
             }
         }
 
@@ -26,7 +26,7 @@ bool loadMeshObj(const std::string &path,
         else if (line[0] == 'f' && line[1] == ' ') {
             int i, j, k;
             if (std::sscanf(line.c_str() + 2, "%d %d %d", &i, &j, &k) == 3) {
-                triangles.push_back(int4{ i-1, j-1, k-1 });
+                triangles.push_back(int4{ j-1, i-1, k-1 });
             }
         }
     }

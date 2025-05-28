@@ -8,13 +8,13 @@ __device__ constexpr float PI = 3.1415926535897932384626433832795029;
 __device__ constexpr float PI_2 = PI / 2;
 __device__ constexpr float PI_4 = PI / 4;
 
-__host__ __device__ constexpr float ARENA_HALF_EXTENT_X = 4096;
-__host__ __device__ constexpr float ARENA_HALF_EXTENT_Y = 5120;
-__host__ __device__ constexpr float ARENA_FULL_EXTENT_Z = 2044;
+__device__ constexpr float ARENA_HALF_EXTENT_X = 4096;
+__device__ constexpr float ARENA_HALF_EXTENT_Y = 6000;
+__device__ constexpr float ARENA_FULL_EXTENT_Z = 2044;
 
-__host__ __device__ constexpr int NUM_CELLS_X = 23;
-__host__ __device__ constexpr int NUM_CELLS_Y = 28;
-__host__ __device__ constexpr int NUM_CELLS_Z = 6;
+__device__ constexpr int NUM_CELLS_X = 32;
+__device__ constexpr int NUM_CELLS_Y = 48;
+__device__ constexpr int NUM_CELLS_Z = 8;
 
 __device__ constexpr float BALL_REST_Z = 93.15f;
 __device__ constexpr float CAR_REST_Z  = 17.01f;

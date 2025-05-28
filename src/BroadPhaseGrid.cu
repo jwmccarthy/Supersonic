@@ -14,16 +14,14 @@ BroadPhaseGrid::BroadPhaseGrid(
     m_numCellsZ(cellsZ)
 {
     // Min/max corner of arena extent
-    m_gridMinCorner  = make_float4(-arenaX, -arenaY, 0, 0);
-    m_gridMaxCorner  = make_float4( arenaX,  arenaY, arenaZ, 0);
+    m_gridMinCorner = make_float4(-arenaX, -arenaY, 0,      0);
+    m_gridMaxCorner = make_float4( arenaX,  arenaY, arenaZ, 0);
     m_gridFullExtent = m_gridMaxCorner - m_gridMinCorner;
 
-    // Pre-compute cell size (+ inverse)
-    m_invCellSize = make_float4(
-        m_numCellsX / m_gridFullExtent.x,
-        m_numCellsY / m_gridFullExtent.y,
-        m_numCellsZ / m_gridFullExtent.z, 0
-    );
+    // Pre-compute cell size inverse
+    m_invCellSize = make_float4(m_numCellsX / m_gridFullExtent.x,
+                                m_numCellsY / m_gridFullExtent.y,
+                                m_numCellsZ / m_gridFullExtent.z, 0);
 
     // Read mesh data
     std::vector<float4> vertices;
@@ -35,7 +33,7 @@ BroadPhaseGrid::BroadPhaseGrid(
     std::vector<int> triIndices;
     buildSpatialGrid(vertices, triangles, cellOffsets, triIndices);
 
-    // Allocate space for pointers
+    // Device pointers
     float4* d_vertices;
     int4*   d_triangles;
     int*    d_cellOffsets;
@@ -101,68 +99,21 @@ void BroadPhaseGrid::buildSpatialGrid(
             int cellIdx = flattenIndex(x, y, z);
             cellTriPairs.push_back(std::make_pair(cellIdx, triIdx));
         }
-
-        // Sort by cell index
-        std::sort(cellTriPairs.begin(), cellTriPairs.end());
-
-        // Build CSR format for triangle access by cell
-        cellOffsets.assign(totalCells + 1, 0);
-        triIndices.resize(cellTriPairs.size());
-
-        for (size_t i = 0; i < cellTriPairs.size(); i++) {
-            auto pair = cellTriPairs[i];
-            cellOffsets[pair.first + 1]++;
-            triIndices[i] = pair.second;
-        }
-
-        // Convert counts to offsets
-        std::partial_sum(cellOffsets.begin(), cellOffsets.end(), cellOffsets.begin());
     }
-}
 
-__host__ __device__ int4 BroadPhaseGrid::worldToCell(float4 point) const {
-    // Normalize to [0, numCells] range
-    float4 normalized = (point - m_gridMinCorner) * m_invCellSize;
-    
-    // Convert to integer indices
-    int x = static_cast<int>(floorf(normalized.x));
-    int y = static_cast<int>(floorf(normalized.y));
-    int z = static_cast<int>(floorf(normalized.z));
-    
-    // Clamp to valid range
-    x = clamp(x, 0, m_numCellsX - 1);
-    y = clamp(y, 0, m_numCellsY - 1);
-    z = clamp(z, 0, m_numCellsZ - 1);
-    
-    return { x, y, z, 0 };
-}
+    // Sort by cell index
+    std::sort(cellTriPairs.begin(), cellTriPairs.end());
 
-template <typename Func>
-__device__ void BroadPhaseGrid::forEachTriangle(float4 aabbMin, float4 aabbMax, Func&& func) const  {
-    int4 startCell = worldToCell(aabbMin);
-    int4 endCell   = worldToCell(aabbMax);
+    // Build CSR format for triangle access by cell
+    cellOffsets.assign(totalCells + 1, 0);
+    triIndices.resize(cellTriPairs.size());
 
-    for (int cellX = startCell.x; cellX <= endCell.x; ++cellX)
-    for (int cellY = startCell.y; cellY <= endCell.y; ++cellY)
-    for (int cellZ = startCell.z; cellZ <= endCell.z; ++cellZ)
-    {
-        int cellIdx = flattenIndex(cellX, cellY, cellZ);
-
-        int triangleStart = m_cellOffsets[cellIdx];
-        int triangleEnd   = m_cellOffsets[cellIdx + 1];
-
-        for (int i = triangleStart; i < triangleEnd; ++i) {
-            int triIdx = m_triIndices[i];
-
-            int4 vertexIdx = m_triangles[triIdx];
-
-            Triangle triangle {
-                m_vertices[vertexIdx.x],
-                m_vertices[vertexIdx.y],
-                m_vertices[vertexIdx.z]
-            };
-
-            func(triangle);
-        }
+    for (size_t i = 0; i < cellTriPairs.size(); i++) {
+        auto pair = cellTriPairs[i];
+        cellOffsets[pair.first + 1]++;
+        triIndices[i] = pair.second;
     }
+
+    // Convert counts to offsets
+    std::partial_sum(cellOffsets.begin(), cellOffsets.end(), cellOffsets.begin());
 }

@@ -15,18 +15,16 @@ __global__ void testTriangleIteration(const BroadPhaseGrid* grid, int* triangleC
 
     // Define a test AABB that should intersect with some part of the mesh
     // We'll use a box at the center of the grid with some reasonable size
-    float4 aabbMin = make_float4(-1.0f, -1.0f, -1.0f, 0.0f);
-    float4 aabbMax = make_float4( 1.0f,  1.0f,  1.0f, 0.0f);
+    float4 aabbMin = make_float4(3520.0f, 4544.0f, 0.0f, 0.0f);
+    float4 aabbMax = make_float4(3520.0f, 4544.0f, 0.0f, 0.0f);
     
     // Local counter to keep track of triangles processed
     int localCount = 0;
     
     // Call forEachTriangle with our AABB and a lambda to count triangles
-    grid->forEachTriangle(aabbMin, aabbMax, [&](const Triangle& tri) __device__ {
-        localCount++;
-        
+    grid->forEachTriangle(aabbMin, aabbMax, [&](const Triangle& tri) {        
         // Debug output for the first few triangles
-        if (localCount <= 5) {
+        if (localCount++ <= 5) {
             printf("Triangle %d: v0(%f, %f, %f), v1(%f, %f, %f), v2(%f, %f, %f)\n",
                    localCount,
                    tri.v0.x, tri.v0.y, tri.v0.z,
@@ -50,10 +48,14 @@ int main(int argc, char** argv) {
     
     // Create a BroadPhaseGrid with reasonable parameters
     // Parameters: mesh path, cells in each dimension, arena extents
+    std::cout << "Creating grid..." << std::endl;
+
     BroadPhaseGrid* grid = new BroadPhaseGrid(
         meshPath, NUM_CELLS_X, NUM_CELLS_Y, NUM_CELLS_Z, 
         ARENA_HALF_EXTENT_X, ARENA_HALF_EXTENT_Y, ARENA_FULL_EXTENT_Z
     );
+
+    std::cout << "Grid created. Copying grid to device..." << std::endl;
     
     // Allocate device memory for the grid and counter
     BroadPhaseGrid* d_grid;
@@ -67,6 +69,8 @@ int main(int argc, char** argv) {
     CUDA_CHECK(cudaMemcpy(d_grid, grid, sizeof(BroadPhaseGrid), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemset(d_triangleCount, 0, sizeof(int)));
     
+    std::cout << "Grid copied. Running test..." << std::endl;
+
     // Launch the test kernel with 1 thread (for simplicity)
     testTriangleIteration<<<1, 1>>>(d_grid, d_triangleCount);
     

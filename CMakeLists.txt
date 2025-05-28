@@ -31,22 +31,6 @@ file(GLOB COMMON_SOURCES
     "src/StateReset.cu"
 )
 
-# Main Test executable
-add_executable(mesh_test ${COMMON_SOURCES} "src/TestMesh.cu")
-target_include_directories(mesh_test PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${TORCH_INCLUDE_DIRS}
-    ${PYTHON_INCLUDE_DIR}
-)
-target_link_libraries(mesh_test PRIVATE 
-    ${TORCH_LIBRARIES}
-    ${PYTHON_LIBRARY}
-)
-set_target_properties(mesh_test PROPERTIES 
-    OUTPUT_NAME "test"
-    CUDA_SEPARABLE_COMPILATION ON
-)
-
 # BroadPhaseGrid Test executable
 add_executable(grid_test ${COMMON_SOURCES} "src/TestBroadPhaseGrid.cu")
 target_include_directories(grid_test PRIVATE 
