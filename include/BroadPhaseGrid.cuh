@@ -13,6 +13,25 @@ public:
                    int cellsX, int cellsY, int cellsZ,
                    float arenaX, float arenaY, float arenaZ);
 
+    __host__ __device__ __forceinline__ Triangle getTriangle(int cellIdx, int offset) const {
+        Triangle tri;
+
+        // Get triangle vertex indices
+        int triIdx = m_triIndices[cellIdx + offset];
+        int4 vertIdx = m_triangles[triIdx];
+
+        tri.v0 = m_vertices[vertIdx.x];
+        tri.v1 = m_vertices[vertIdx.y];
+        tri.v2 = m_vertices[vertIdx.z];
+
+        return tri;
+    }
+
+    __host__ __device__ __forceinline__ void getTriangleBounds(int cellIdx, int* start, int* end) const {
+        *start = m_cellOffsets[cellIdx];
+        *end = m_cellOffsets[cellIdx + 1];
+    }
+
     // Convert world position to cell XYZ index
     __host__ __device__ __forceinline__ int4 worldToCell(float4 point) const {
         float4 normalized = (point - m_gridMinCorner) * m_invCellSize;
@@ -31,6 +50,7 @@ public:
     }
 
 private: 
+    // Grid dims
     int m_numCellsX;
     int m_numCellsY;
     int m_numCellsZ;
@@ -44,9 +64,9 @@ private:
     float4 m_invCellSize;
 
     // Triangle mesh data (CSR format)
-    const float4* __restrict__ m_vertices;
-    const int4*   __restrict__ m_triangles;
-    const int*    __restrict__ m_cellOffsets;
+    const float4* __restrict__ m_vertices;    // World positions of vertices
+    const int4*   __restrict__ m_triangles;   // Indices for 3 triangle vertices
+    const int*    __restrict__ m_cellOffsets; // Partial sum array w/ offsets
     const int*    __restrict__ m_triIndices;
 
     // Host function for computing per-cell triangle indices
