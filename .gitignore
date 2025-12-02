@@ -1,0 +1,57 @@
+# Build
+build/
+cmake-build-*/
+out/
+bin/
+lib/
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.exe
+
+# CUDA
+*.cubin
+*.ptx
+*.fatbin
+*.gpu
+*.i
+*.ii
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.cproject
+.settings/
+
+# Clangd / LSP
+.cache/
+compile_commands.json
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Generated
+*.gen.hpp
+*.gen.cpp
+*.generated.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug
+*.dSYM/
+core
+core.*
+
