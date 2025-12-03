@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <cuda_runtime.h>
 
 #include "CudaKernels.hpp"
@@ -33,17 +32,16 @@ __global__ void collisionTestKernel(GameState* state)
     // Base index for the car state arrays
     const int carBase = simIdx * numCars;
 
+    // Car pair positions and rotations
     float4 posA = state->cars.position[carBase + j];
     float4 rotA = state->cars.rotation[carBase + j];
-
     float4 posB = state->cars.position[carBase + i];
     float4 rotB = state->cars.rotation[carBase + i];
 
-    bool c = carCarCollision(posA, rotA, posB, rotB);
-    
-    // if (c)
-    // {
-    //     printf("Sim ID: %d -- Car pos A: (%f, %f, %f) -- Car pos B: (%f, %f, %f) -- IDs: (%d, %d)\n",
-    //         simIdx, posA.x, posA.y, posA.z, posB.x, posB.y, posB.z, i, j);
-    // }
+    bool overlap = carCarCollision(posA, rotA, posB, rotB);
+
+    if (overlap)
+    {
+        // printf("Collision detected: Cars %d and %d in sim %d\n", i, j, simIdx);
+    }
 }
