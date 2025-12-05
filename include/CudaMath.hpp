@@ -7,6 +7,11 @@
 #define rsqrtf(x) (1.0f / sqrtf(x))
 #endif
 
+__device__ __forceinline__ float sign(float x)
+{
+    return (x >= 0.0f) ? 1.0f : -1.0f;
+}
+
 namespace vec3
 {
     __device__ __forceinline__ float4 add(float4 a, float4 b)

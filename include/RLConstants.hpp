@@ -30,7 +30,7 @@ __device__ constexpr int NUM_BOOST_PADS = 34;
 // Car spawn locations
 __device__ constexpr CarSpawn KICKOFF_LOCATIONS[5] = {
     { -2048, -2560, PI_4 * 1 },  // Right corner
-    { -2028, -2560, PI_4 * 3 },  // Left corner
+    {  2048, -2560, PI_4 * 3 },  // Left corner
     {  -256, -3840, PI_4 * 2 },  // Back right
     {   256, -3840, PI_4 * 2 },  // Back Left
     {     0, -4608, PI_4 * 2 }   // Back center
@@ -57,6 +57,9 @@ __device__ constexpr float INV_BALL_MASS = 1 / BALL_MASS;
 __device__ constexpr float4 CAR_EXTENTS = {  118, 84.2,  36.2, 0};
 __device__ constexpr float4 CAR_HALF_EX = {   59, 42.1,  18.1, 0};
 __device__ constexpr float4 CAR_OFFSETS = {13.87,    0, 20.75, 0};
+
+// Car half extents array
+__device__ constexpr float CAR_HALF_EX_ARR[3] = { CAR_HALF_EX.x, CAR_HALF_EX.y, CAR_HALF_EX.z };
 
 // World axis helpers
 __device__ constexpr float4 WORLD_X = {1, 0, 0, 0};

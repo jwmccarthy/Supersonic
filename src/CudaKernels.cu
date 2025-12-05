@@ -33,15 +33,10 @@ __global__ void collisionTestKernel(GameState* state)
     const int carBase = simIdx * numCars;
 
     // Car pair positions and rotations
-    float4 posA = state->cars.position[carBase + j];
-    float4 rotA = state->cars.rotation[carBase + j];
-    float4 posB = state->cars.position[carBase + i];
-    float4 rotB = state->cars.rotation[carBase + i];
+    float4 posA = state->cars.position[carBase + i];
+    float4 rotA = state->cars.rotation[carBase + i];
+    float4 posB = state->cars.position[carBase + j];
+    float4 rotB = state->cars.rotation[carBase + j];
 
-    bool overlap = carCarCollision(posA, rotA, posB, rotB);
-
-    if (overlap)
-    {
-        // printf("Collision detected: Cars %d and %d in sim %d\n", i, j, simIdx);
-    }
+    carCarCollision(posA, rotA, posB, rotB);
 }

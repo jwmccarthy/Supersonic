@@ -49,7 +49,7 @@ set_target_properties(supersonic PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON
 )
 
-# Disable warnings
+# Force include reflection header and disable warnings
 target_compile_options(supersonic PRIVATE
   $<$<COMPILE_LANGUAGE:CXX>:-include ${REFLECTION_HEADER}>
   $<$<COMPILE_LANGUAGE:CXX>:-Wno-attributes>
