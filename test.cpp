@@ -8,7 +8,7 @@ int main()
     using clock  = std::chrono::steady_clock;
     using second = std::chrono::duration<double>;
 
-    RLEnvironment env{256, 4, 4, 123};
+    RLEnvironment env{512, 4, 4, 123};
 
     env.reset();
 
