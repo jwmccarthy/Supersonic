@@ -11,8 +11,6 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-# Enable testing
-enable_testing()
 include(GoogleTest)
 
 # Collision tests
@@ -43,3 +41,23 @@ target_link_libraries(test_collisions PRIVATE
 
 gtest_discover_tests(test_collisions)
 
+# Math utility tests
+add_executable(test_math
+  test_math.cu
+)
+
+target_include_directories(test_math PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+  ${CUDAToolkit_INCLUDE_DIRS}
+)
+
+target_compile_options(test_math PRIVATE
+  $<$<COMPILE_LANGUAGE:CUDA>:-Wno-deprecated-gpu-targets>
+)
+
+target_link_libraries(test_math PRIVATE
+  GTest::gtest_main
+  CUDA::cudart
+)
+
+gtest_discover_tests(test_math)

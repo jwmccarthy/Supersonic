@@ -64,5 +64,6 @@ target_link_libraries(supersonic PRIVATE CUDA::cudart)
 
 # Tests (optional)
 if(BUILD_TESTS)
+  enable_testing()
   add_subdirectory(tests)
 endif()
