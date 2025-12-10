@@ -29,7 +29,7 @@ __device__ constexpr int NUM_BOOST_PADS = 34;
 
 // Car spawn locations
 __device__ constexpr CarSpawn KICKOFF_LOCATIONS[5] = {
-    { -2048, -2560, PI_4 * 1 },  // Right corner
+    {  2048, -2440, PI_4 * 1 },  // Right corner
     {  2048, -2560, PI_4 * 3 },  // Left corner
     {  -256, -3840, PI_4 * 2 },  // Back right
     {   256, -3840, PI_4 * 2 },  // Back Left

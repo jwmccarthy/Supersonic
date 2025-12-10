@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(supersonic LANGUAGES CXX CUDA)
 
+# Options
+option(BUILD_TESTS "Build the test suite" OFF)
+
 # clangd / tooling
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -58,3 +61,8 @@ target_compile_options(supersonic PRIVATE
 )
 
 target_link_libraries(supersonic PRIVATE CUDA::cudart)
+
+# Tests (optional)
+if(BUILD_TESTS)
+  add_subdirectory(tests)
+endif()

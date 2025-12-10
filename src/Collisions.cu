@@ -12,6 +12,8 @@ __device__ void carCarCollision(float4 posA, float4 rotA, float4 posB, float4 ro
     // Get SAT result (axis, depth)
     SATResult res = carCarSATTest(ctx);
 
+    if (!res.overlap) return;
+
     // Check for face-face or edge-edge
     if (res.axisIdx < 6)
     {
