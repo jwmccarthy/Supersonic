@@ -20,11 +20,11 @@ __device__ void carCarCollision(float4 posA, float4 rotA, float4 posB, float4 ro
     if (res.axisIdx < 6)
     {
         // Face-face collision
-        contact = generateFaceFaceManifold(ctx, res);
+        generateFaceFaceManifold(ctx, res, contact);
     }
     else
     {
         // Edge-edge collision
-        contact = generateEdgeEdgeManifold(ctx, res);
+        generateEdgeEdgeManifold(ctx, res, contact);
     }
 }
