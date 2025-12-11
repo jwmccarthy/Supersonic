@@ -24,6 +24,14 @@ struct EdgeAxes
     int bi, b1, b2;  // Car B's incident and perpendicular axes
 };
 
+struct ContactManifold
+{
+    int    count;      // # of points in the manifold
+    float  depths[4];  // Penetration depths at points (negative if penetrating)
+    float4 points[4];  // World-space contact points
+    float4 normal;     // Shared contact normal
+};
+
 // Project car extents onto axis
 __device__ float projectRadius(float4 L, float4 axX, float4 axY, float4 axZ);
 

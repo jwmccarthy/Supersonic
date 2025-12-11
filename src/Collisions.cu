@@ -14,15 +14,17 @@ __device__ void carCarCollision(float4 posA, float4 rotA, float4 posB, float4 ro
 
     if (!res.overlap) return;
 
+    ContactManifold contact;
+
     // Check for face-face or edge-edge
     if (res.axisIdx < 6)
     {
         // Face-face collision
-        generateFaceFaceManifold(ctx, res);
+        contact = generateFaceFaceManifold(ctx, res);
     }
     else
     {
         // Edge-edge collision
-        generateEdgeEdgeManifold(ctx, res);
+        contact = generateEdgeEdgeManifold(ctx, res);
     }
 }

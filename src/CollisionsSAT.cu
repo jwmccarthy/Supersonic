@@ -48,8 +48,11 @@ __device__ void testAxis(
         L = vec3::mult(L, rsqrtf(lenSq));
     }
 
+    // Sign L according to direction
+    float d = vec3::dot(L, ctx.vecAB);
+    L = vec3::mult(L, sign(d));
+
     // Project center distance, car radii onto L
-    float d = fabsf(vec3::dot(L, ctx.vecAB));
     float r = projectRadius(L, WORLD_X, WORLD_Y, WORLD_Z) +
               projectRadius(L, ctx.axB[0], ctx.axB[1], ctx.axB[2]);
 

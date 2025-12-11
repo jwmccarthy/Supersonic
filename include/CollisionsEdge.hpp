@@ -22,4 +22,8 @@ __device__ EdgePoints getEdgeCenters(const SATContext& ctx, const EdgeAxes& ax);
 __device__ float4 getEdgeContactPoint(const EdgePoints& ec, float4 dirA, float4 dirB);
 
 // Edge-edge collision manifold generation
-__device__ void generateEdgeEdgeManifold(SATContext& ctx, SATResult& res);
+__device__ void generateEdgeEdgeManifold(
+    SATContext& ctx, 
+    SATResult& res,
+    ContactManifold& contact
+);

@@ -50,7 +50,11 @@ __device__ float4 getEdgeContactPoint(const EdgePoints& ec, float4 dirA, float4 
 }
 
 // Edge-edge collision manifold generation
-__device__ void generateEdgeEdgeManifold(SATContext& ctx, SATResult& res)
+__device__ void generateEdgeEdgeManifold(
+    SATContext& ctx, 
+    SATResult& res,
+    ContactManifold& contact
+)
 {
     // Get edge axis indices
     EdgeAxes ax = getEdgeAxes(res.axisIdx);
@@ -59,5 +63,14 @@ __device__ void generateEdgeEdgeManifold(SATContext& ctx, SATResult& res)
     EdgePoints ec = getEdgeCenters(ctx, ax);
 
     // Compute contact point (closest point on edge B)
-    float4 contact = getEdgeContactPoint(ec, WORLD_AXES[ax.ai], ctx.axB[ax.bi]);
+    float4 point = getEdgeContactPoint(ec, WORLD_AXES[ax.ai], ctx.axB[ax.bi]);
+
+    // Construct contact manifold
+    contact.count = 1;
+    contact.points[0] = point;
+    contact.depths[0] = res.maxSep;
+
+    // Apply sign to contact normal
+    float d = vec3::dot(ctx.vecAB, res.bestAx);
+    contact.normal = vec3::mult(res.bestAx, sign(d));
 }
