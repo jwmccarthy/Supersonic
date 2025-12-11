@@ -8,16 +8,28 @@
 
 struct ReferenceFace
 {
-    float4 normal;   // Face normal (points toward incident box)
-    float4 ortho1;   // First tangent axis
-    float4 ortho2;   // Second tangent axis
-    float4 center;   // Face center point
-    float2 halfEx;   // Half-extents along ortho1 and ortho2
+    float4 normal;     // Face normal (points toward incident box)
+    float4 ortho1;     // First tangent axis
+    float4 ortho2;     // Second tangent axis
+    float4 center;     // Face center point
+    float  halfEx[2];  // Half-extents along ortho1 and ortho2
 };
 
 struct IncidentFace
 {
     float4 verts[4];  // 4 corners of the face
+};
+
+struct ClipPoint
+{
+    float2 p;  // 2D point
+    float  d;  // Depth below reference face
+};
+
+struct ClipPolygon
+{
+    ClipPoint points[8];
+    int count;
 };
 
 // Blend between two axes based on weight (branchless select)

@@ -73,7 +73,8 @@ __device__ void getReferenceFace(
 
     // Get reference face center & extents
     ref.center = blendAxes(cA, cB, b);
-    ref.halfEx = make_float2(CAR_HALF_EX_ARR[j], CAR_HALF_EX_ARR[k]);
+    ref.halfEx[0] = CAR_HALF_EX_ARR[j];
+    ref.halfEx[1] = CAR_HALF_EX_ARR[k];
 }
 
 // Build incident face vertices from reference face
@@ -111,6 +112,30 @@ __device__ void getIncidentFace(
     setFaceVertices(inc.verts, incCent, off1, off2);
 }
 
+// Project incident vertices onto reference plane
+__device__ void projectIncidentVertices(
+    ReferenceFace& ref, 
+    IncidentFace& inc, 
+    ClipPolygon& poly
+)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        // Relative vector from ref center to inc vert
+        float4 r = vec3::sub(inc.verts[i], ref.center);
+
+        // Length along reference tangents
+        float u = vec3::dot(r, ref.ortho1);
+        float v = vec3::dot(r, ref.ortho2);
+        poly.points[i].p = make_float2(u, v);
+
+        // Get depth of incident point
+        poly.points[i].d = -vec3::dot(r, ref.normal);
+    }
+}
+
+// Clip incident vertices against reference polygon edges
+
 // Face-face collision manifold generation (main entry point)
 __device__ void generateFaceFaceManifold(
     SATContext& ctx, 
@@ -120,10 +145,16 @@ __device__ void generateFaceFaceManifold(
 {
     ReferenceFace ref;
     IncidentFace inc;
+    ClipPolygon poly;
 
-    // Build reference and incident faces
+    // Build reference face
     getReferenceFace(ctx, res, ref);
+
+    // Build incident face in reference space
     getIncidentFace(ctx, res, ref, inc);
+
+    // Project incident vertices on reference plane
+    projectIncidentVertices(ref, inc, poly);
 
     // TODO: Project incident vertices to 2D
     // TODO: Clip polygon against reference rectangle
