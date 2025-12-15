@@ -37,11 +37,14 @@ __device__ SATContext buildSATContext(float4 posA, float4 rotA, float4 posB, flo
 
 // Test single SAT axis
 __device__ void testAxis(
-    float4 L, int axis, const SATContext& ctx, SATResult& res, bool normalize
+    float4 L, int axis, 
+    const SATContext& ctx, 
+    SATResult& res, 
+    bool isEdgeAxis
 )
 {
     // Normalize edge axes (face axes already unit length)
-    if (normalize)
+    if (isEdgeAxis)
     {
         float lenSq = vec3::dot(L, L);
         if (lenSq < 1e-6f) return;
@@ -52,22 +55,25 @@ __device__ void testAxis(
     float d = vec3::dot(L, ctx.vecAB);
     L = vec3::mult(L, sign(d));
 
-    // Project center distance, car radii onto L
+    // Project car radii onto L
     float r = projectRadius(L, WORLD_X, WORLD_Y, WORLD_Z) +
               projectRadius(L, ctx.axB[0], ctx.axB[1], ctx.axB[2]);
 
-    // Check for combined projected dist > dist between centers
-    // s >= 0 indicates separation, < 0 indicates overlap
-    float s = d - r;
+    // Compute penetration depth (positive = overlap, negative = separation)
+    // Adjust edge-edge separation to favor face contacts
+    float depth = r - d;
+    float fudge = isEdgeAxis ? (depth * SAT_FUDGE) : depth;
 
-    if (s > res.maxSep)
+    // Update best axis if this has shallower penetration
+    if (fudge < res.depth)
     {
-        res.maxSep = s;
+        res.depth = depth;
         res.bestAx = L;
         res.axisIdx = axis;
     }
 
-    if (s > 0.0f) res.overlap = false;
+    // Negative depth means separation (no overlap)
+    if (depth < 0.0f) res.overlap = false;
 }
 
 // SAT collision test between two cars

@@ -68,7 +68,7 @@ __device__ void generateEdgeEdgeManifold(
     // Construct contact manifold
     contact.count = 1;
     contact.points[0] = point;
-    contact.depths[0] = res.maxSep;
+    contact.depths[0] = res.depth;
 
     // Apply sign to contact normal
     float d = vec3::dot(ctx.vecAB, res.bestAx);

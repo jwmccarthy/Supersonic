@@ -12,7 +12,7 @@ struct ReferenceFace
     float4 ortho1;     // First tangent axis
     float4 ortho2;     // Second tangent axis
     float4 center;     // Face center point
-    float  halfEx[2];  // Half-extents along ortho1 and ortho2
+    float2 halfEx;     // Half-extents along ortho1 and ortho2
 };
 
 struct IncidentFace
@@ -55,6 +55,9 @@ __device__ void getIncidentFace(
     const ReferenceFace& ref,
     IncidentFace& inc
 );
+
+// Cull contact points to max 4 using angular distribution
+__device__ void cullContactPoints(ContactManifold& contact);
 
 // Face-face collision manifold generation (main entry point)
 __device__ void generateFaceFaceManifold(

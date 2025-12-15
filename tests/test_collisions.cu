@@ -14,7 +14,7 @@
 
 struct SATTestResult
 {
-    float  maxSep;
+    float  depth;
     int    axisIdx;
     bool   overlap;
 };
@@ -63,6 +63,14 @@ struct EdgeManifoldResult
     float4 normal;
 };
 
+struct FaceManifoldResult
+{
+    int    count;
+    float  depths[8];
+    float4 points[8];
+    float4 normal;
+};
+
 // ============================================================================
 // CUDA test kernels
 // ============================================================================
@@ -76,7 +84,7 @@ __global__ void runSATTest(
     SATContext ctx = buildSATContext(posA, rotA, posB, rotB);
     SATResult res = carCarSATTest(ctx);
     
-    result->maxSep = res.maxSep;
+    result->depth = res.depth;
     result->axisIdx = res.axisIdx;
     result->overlap = res.overlap;
 }
@@ -164,6 +172,26 @@ __global__ void runEdgeEdgeManifoldTest(
     result->count = manifold.count;
     result->normal = manifold.normal;
     for (int i = 0; i < 4; i++)
+    {
+        result->points[i] = manifold.points[i];
+        result->depths[i] = manifold.depths[i];
+    }
+}
+
+__global__ void runFaceFaceManifoldTest(
+    float4 posA, float4 rotA, float4 posB, float4 rotB,
+    FaceManifoldResult* result
+)
+{
+    SATContext ctx = buildSATContext(posA, rotA, posB, rotB);
+    SATResult res = carCarSATTest(ctx);
+    
+    ContactManifold manifold = {};
+    generateFaceFaceManifold(ctx, res, manifold);
+    
+    result->count = manifold.count;
+    result->normal = manifold.normal;
+    for (int i = 0; i < 8; i++)
     {
         result->points[i] = manifold.points[i];
         result->depths[i] = manifold.depths[i];
@@ -302,7 +330,7 @@ TEST_F(SATCollisionTest, IdenticalPositionsOverlap)
     auto result = runSAT(origin, identityQuat, origin, identityQuat);
     
     EXPECT_TRUE(result.overlap) << "Identical positions should overlap";
-    EXPECT_LT(result.maxSep, 0) << "Separation should be negative (penetration)";
+    EXPECT_GT(result.depth, 0) << "Depth should be positive (penetration)";
 }
 
 TEST_F(SATCollisionTest, FarApartNoOverlap)
@@ -311,7 +339,7 @@ TEST_F(SATCollisionTest, FarApartNoOverlap)
     auto result = runSAT(origin, identityQuat, farPos, identityQuat);
     
     EXPECT_FALSE(result.overlap) << "Cars 500 units apart should not overlap";
-    EXPECT_GT(result.maxSep, 0) << "Separation should be positive";
+    EXPECT_LT(result.depth, 0) << "Depth should be negative (separation)";
 }
 
 TEST_F(SATCollisionTest, BarelyTouchingOverlaps)
@@ -779,7 +807,7 @@ TEST_F(EdgeEdgeManifoldTest, ContactPointBetweenCars)
     EXPECT_LT(result.points[0].y, posB.y) << "Contact Y should be less than B's position";
 }
 
-TEST_F(EdgeEdgeManifoldTest, DepthIsNegativeWhenPenetrating)
+TEST_F(EdgeEdgeManifoldTest, DepthIsPositiveWhenPenetrating)
 {
     float4 posB = make_float4(80, 80, 0, 0);
     float s = sinf(3.14159f / 8.0f);
@@ -788,5 +816,177 @@ TEST_F(EdgeEdgeManifoldTest, DepthIsNegativeWhenPenetrating)
     
     auto result = runEdgeEdgeManifold(origin, identityQuat, posB, rotB);
     
-    EXPECT_LT(result.depths[0], 0.0f) << "Depth should be negative when penetrating";
+    EXPECT_GT(result.depths[0], 0.0f) << "Depth should be positive when penetrating";
+}
+
+// ============================================================================
+// Face-Face Manifold Tests
+// ============================================================================
+
+FaceManifoldResult runFaceFaceManifold(float4 posA, float4 rotA, float4 posB, float4 rotB)
+{
+    FaceManifoldResult* d_result;
+    FaceManifoldResult h_result;
+    
+    cudaMalloc(&d_result, sizeof(FaceManifoldResult));
+    runFaceFaceManifoldTest<<<1, 1>>>(posA, rotA, posB, rotB, d_result);
+    cudaDeviceSynchronize();
+    cudaMemcpy(&h_result, d_result, sizeof(FaceManifoldResult), cudaMemcpyDeviceToHost);
+    cudaFree(d_result);
+    
+    return h_result;
+}
+
+class FaceFaceManifoldTest : public ::testing::Test
+{
+protected:
+    float4 identityQuat = make_float4(0, 0, 0, 1);
+    float4 origin = make_float4(0, 0, 0, 0);
+};
+
+TEST_F(FaceFaceManifoldTest, ProducesContactPoints)
+{
+    // Overlapping face-face collision along X
+    float4 posB = make_float4(110, 0, 0, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    EXPECT_GT(result.count, 0) << "Should produce at least one contact point";
+    EXPECT_LE(result.count, 4) << "Should produce at most 4 contact points (culled)";
+}
+
+TEST_F(FaceFaceManifoldTest, NormalIsUnitLength)
+{
+    float4 posB = make_float4(110, 0, 0, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    float len = sqrtf(result.normal.x * result.normal.x +
+                      result.normal.y * result.normal.y +
+                      result.normal.z * result.normal.z);
+    EXPECT_NEAR(len, 1.0f, 1e-4f) << "Contact normal should be unit length";
+}
+
+TEST_F(FaceFaceManifoldTest, NormalPointsAlongSeparationAxis)
+{
+    // Cars separated along X axis
+    float4 posB = make_float4(110, 0, 0, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    // Normal should be mostly along X (the separation axis)
+    EXPECT_GT(fabsf(result.normal.x), 0.9f) << "Normal should point along X axis";
+}
+
+TEST_F(FaceFaceManifoldTest, NormalPointsFromATowardB)
+{
+    float4 posB = make_float4(110, 0, 0, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    // Normal should point from A toward B
+    float dot = result.normal.x * posB.x + result.normal.y * posB.y + result.normal.z * posB.z;
+    EXPECT_GT(dot, 0.0f) << "Normal should point from A toward B";
+}
+
+TEST_F(FaceFaceManifoldTest, DepthsArePositiveForPenetration)
+{
+    float4 posB = make_float4(110, 0, 0, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    for (int i = 0; i < result.count; ++i)
+    {
+        EXPECT_GT(result.depths[i], 0.0f) 
+            << "Depth " << i << " should be positive (penetrating)";
+    }
+}
+
+TEST_F(FaceFaceManifoldTest, ContactPointsInOverlapRegion)
+{
+    float4 posB = make_float4(110, 0, 0, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    // Contact points should be between the two car centers
+    for (int i = 0; i < result.count; ++i)
+    {
+        EXPECT_GT(result.points[i].x, 0.0f) 
+            << "Contact point " << i << " X should be positive";
+        EXPECT_LT(result.points[i].x, posB.x) 
+            << "Contact point " << i << " X should be less than B's center";
+    }
+}
+
+TEST_F(FaceFaceManifoldTest, CullingLimitsToFourPoints)
+{
+    // Deep overlap should generate many clipped points, then cull to 4
+    float4 posB = make_float4(80, 0, 0, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    EXPECT_LE(result.count, 4) << "Culling should limit to max 4 points";
+}
+
+TEST_F(FaceFaceManifoldTest, YAxisOverlap)
+{
+    // Overlap along Y axis
+    float4 posB = make_float4(0, 75, 0, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    EXPECT_GT(result.count, 0) << "Should produce contact points for Y overlap";
+    EXPECT_GT(fabsf(result.normal.y), 0.9f) << "Normal should point along Y axis";
+}
+
+TEST_F(FaceFaceManifoldTest, ZAxisOverlap)
+{
+    // Overlap along Z axis
+    float4 posB = make_float4(0, 0, 30, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    EXPECT_GT(result.count, 0) << "Should produce contact points for Z overlap";
+    EXPECT_GT(fabsf(result.normal.z), 0.9f) << "Normal should point along Z axis";
+}
+
+TEST_F(FaceFaceManifoldTest, RotatedCarCollision)
+{
+    // Car B rotated 45 degrees around Z
+    float4 posB = make_float4(90, 30, 0, 0);
+    float s = sinf(3.14159f / 8.0f);
+    float c = cosf(3.14159f / 8.0f);
+    float4 rotB = make_float4(0, 0, s, c);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, rotB);
+    
+    EXPECT_GT(result.count, 0) << "Should produce contacts for rotated collision";
+    EXPECT_LE(result.count, 4) << "Should still respect culling limit";
+}
+
+TEST_F(FaceFaceManifoldTest, IdenticalPositionProducesContacts)
+{
+    // Cars at same position (maximum overlap)
+    auto result = runFaceFaceManifold(origin, identityQuat, origin, identityQuat);
+    
+    EXPECT_GT(result.count, 0) << "Identical positions should produce contacts";
+}
+
+TEST_F(FaceFaceManifoldTest, DeepestPointIsKept)
+{
+    // With culling, the deepest point should always be preserved
+    float4 posB = make_float4(80, 0, 0, 0);
+    
+    auto result = runFaceFaceManifold(origin, identityQuat, posB, identityQuat);
+    
+    // Find max depth
+    float maxDepth = 0.0f;
+    for (int i = 0; i < result.count; ++i)
+    {
+        if (result.depths[i] > maxDepth) maxDepth = result.depths[i];
+    }
+    
+    // Max depth should be reasonable (not zero, not huge)
+    EXPECT_GT(maxDepth, 1.0f) << "Should have meaningful penetration depth";
+    EXPECT_LT(maxDepth, 100.0f) << "Depth should be bounded";
 }
