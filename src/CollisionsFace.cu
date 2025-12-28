@@ -224,7 +224,9 @@ __device__ void cullContactPoints(ContactManifold& contact)
     // Find deepest point index
     int deepIdx = 0;
     for (int i = 1; i < n; ++i)
+    {
         if (contact.depths[i] > contact.depths[deepIdx]) deepIdx = i;
+    }
 
     // Compute centroid
     float4 centroid = make_float4(0, 0, 0, 0);
@@ -333,7 +335,7 @@ __device__ void generateFaceFaceManifold(
 
     // Project incident vertices on reference plane
     projectIncidentVertices(ref, inc, poly);
-
+H
     // Clip incident polygon against reference plane
     clipIncidentPoly(poly, ref.halfEx);
 
