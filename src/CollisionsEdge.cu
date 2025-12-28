@@ -3,15 +3,16 @@
 #include "CollisionsSAT.hpp"
 #include "CollisionsEdge.hpp"
 
-// Offset along one axis toward the other car's center
+// Compute offset along axis toward other car's center
+// Used to find the edge closest to the other car
 __device__ float4 axisOffset(float4 vecAB, float4 axis, int idx)
 {
-    float s = sign(vec3::dot(vecAB, axis));
-    return vec3::mult(axis, s * CAR_HALF_EX_ARR[idx]);
+    return vec3::mult(axis, sign(vec3::dot(vecAB, axis)) * CAR_HALF_EX_ARR[idx]);
 }
 
-// Edge center via sum of offsets along the two perpendicular axes
-__device__ float4 edgeCenter(float4 vecAB, const float4* axes, int i1, int i2, float dir = 1.0f)
+// Compute edge center from two perpendicular axis offsets
+// dir = +1 for car A (toward B), -1 for car B (toward A)
+__device__ float4 edgeCenter(float4 vecAB, const float4* axes, int i1, int i2, float dir)
 {
     return vec3::add(
         vec3::mult(axisOffset(vecAB, axes[i1], i1), dir),
@@ -20,57 +21,42 @@ __device__ float4 edgeCenter(float4 vecAB, const float4* axes, int i1, int i2, f
 }
 
 // Get edge center points for both cars
+// These are the midpoints of the colliding edges
 __device__ EdgePoints getEdgeCenters(const SATContext& ctx, const EdgeAxes& ax)
 {
     EdgePoints ep;
-    ep.pA = edgeCenter(ctx.vecAB, WORLD_AXES, ax.a1, ax.a2);
-    ep.pB = edgeCenter(ctx.vecAB, ctx.axB, ax.b1, ax.b2, -1.0f);
-    ep.pB = vec3::add(ep.pB, ctx.vecAB);
+    ep.pA = edgeCenter(ctx.vecAB, WORLD_AXES, ax.a1, ax.a2, +1.0f);
+    ep.pB = vec3::add(edgeCenter(ctx.vecAB, ctx.axB, ax.b1, ax.b2, -1.0f), ctx.vecAB);
     return ep;
 }
 
-// Compute closest point on edge B (contact point)
-__device__ float4 getEdgeContactPoint(const EdgePoints& ec, float4 dirA, float4 dirB)
+// Find closest point on edge B to edge A
+// Uses line-line closest point formula
+__device__ float4 getEdgeContactPoint(const EdgePoints& ep, float4 dA, float4 dB)
 {
-    // Vector between center points
-    float4 r = vec3::sub(ec.pB, ec.pA);
+    float4 r = vec3::sub(ep.pB, ep.pA);
+    float  a = vec3::dot(r, dA);
+    float  b = vec3::dot(r, dB);
+    float  n = vec3::dot(dA, dB);
+    float  d = 1.0f - n * n;
 
-    // Closest point parameter for edge B
-    float a = vec3::dot(r, dirA);
-    float b = vec3::dot(r, dirB);
-    float n = vec3::dot(dirA, dirB);
-    float d = 1.0f - n * n;
-
-    // Parallel edges - use center point
-    if (d <= 1e-6f) return ec.pB;
-
-    // Compute s parameter and return closest point on B
-    float s = (n * a - b) / d;
-    return vec3::add(ec.pB, vec3::mult(dirB, s));
+    // Parallel edges: use center point
+    if (d <= 1e-6f)
+    {
+        return ep.pB;
+    }
+    return vec3::add(ep.pB, vec3::mult(dB, (n * a - b) / d));
 }
 
-// Edge-edge collision manifold generation
-__device__ void generateEdgeEdgeManifold(
-    SATContext& ctx, 
-    SATResult& res,
-    ContactManifold& contact
-)
+// Generate edge-edge contact manifold
+// Edge contacts always produce exactly one contact point
+__device__ void generateEdgeEdgeManifold(SATContext& ctx, SATResult& res, ContactManifold& m)
 {
-    // Get edge axis indices
-    EdgeAxes ax = getEdgeAxes(res.axisIdx);
+    EdgeAxes   ax = getEdgeAxes(res.axisIdx);
+    EdgePoints ep = getEdgeCenters(ctx, ax);
 
-    // Get edge center points
-    EdgePoints ec = getEdgeCenters(ctx, ax);
-
-    // Compute contact point (closest point on edge B)
-    float4 point = getEdgeContactPoint(ec, WORLD_AXES[ax.ai], ctx.axB[ax.bi]);
-
-    // Construct contact manifold
-    contact.count = 1;
-    contact.points[0] = point;
-    contact.depths[0] = res.depth;
-
-    // Apply sign to contact normal
-    float d = vec3::dot(ctx.vecAB, res.bestAx);
-    contact.normal = vec3::mult(res.bestAx, sign(d));
+    m.count     = 1;
+    m.points[0] = getEdgeContactPoint(ep, WORLD_AXES[ax.ai], ctx.axB[ax.bi]);
+    m.depths[0] = res.depth;
+    m.normal    = vec3::mult(res.bestAx, sign(vec3::dot(ctx.vecAB, res.bestAx)));
 }

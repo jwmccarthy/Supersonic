@@ -21,19 +21,15 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 
 float* RLEnvironment::step()
 {
-    // Number of collision pairs to test
-    int numCars = numB + numO;
-    int numPairs = numCars * (numCars - 1) / 2;
-    int numThreads = sims * numPairs;
+    // One thread per collision pair
+    int nCar   = numB + numO;
+    int nPairs = nCar * (nCar - 1) / 2;
+    int nTotal = sims * nPairs;
 
-    // Block size and grid size for the kernels
     int blockSize = 256;
-    int gridSize = (numThreads + blockSize - 1) / blockSize;
+    int gridSize  = (nTotal + blockSize - 1) / blockSize;
 
-    // Run SAT test kernel first, then manifold generation
-    satTestKernel<<<gridSize, blockSize>>>(d_state);
-    manifoldKernel<<<gridSize, blockSize>>>(d_state);
-
+    collisionKernel<<<gridSize, blockSize>>>(d_state);
     cudaDeviceSynchronize();
 
     return d_output;
