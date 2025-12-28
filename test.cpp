@@ -21,7 +21,7 @@ int main()
 
     auto t1 = clock::now();
     second dt = t1 - t0;
-    std::cout << "elapsed: " << dt.count() << " s\n";
+    std::cout << "elapsed: " << dt.count() << " s\n";
 
     return 0;
 }

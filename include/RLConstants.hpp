@@ -68,3 +68,8 @@ __device__ constexpr float4 WORLD_Z = {0, 0, 1, 0};
 
 // World axis array
 __device__ constexpr float4 WORLD_AXES[3] = { WORLD_X, WORLD_Y, WORLD_Z };
+
+// Bounding sphere radius for broad-phase (sqrt(59² + 42.1² + 18.1²) ≈ 74.5)
+__device__ constexpr float CAR_BOUNDING_RADIUS = 74.5f;
+__device__ constexpr float CAR_BOUNDING_RADIUS_SQ = CAR_BOUNDING_RADIUS * CAR_BOUNDING_RADIUS;
+__device__ constexpr float CAR_PAIR_MAX_DIST_SQ = 4.0f * CAR_BOUNDING_RADIUS_SQ;  // (2r)²

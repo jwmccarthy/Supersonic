@@ -3,7 +3,7 @@
 #include <cuda_runtime.h>
 #include "CollisionsSAT.hpp"
 
-// Reference face for Sutherland-Hodgman clipping
+// Reference face for contact clipping
 struct ReferenceFace
 {
     float4 normal;  // Face normal (points toward incident box)
@@ -17,20 +17,6 @@ struct ReferenceFace
 struct IncidentFace
 {
     float4 verts[4];
-};
-
-// 2D clip point with depth
-struct ClipPoint
-{
-    float2 p;  // 2D position on reference plane
-    float  d;  // Depth below reference face
-};
-
-// Clipped polygon (up to 8 points after clipping)
-struct ClipPolygon
-{
-    ClipPoint points[8];
-    int       count;
 };
 
 // Blend between two axes (branchless select)
@@ -48,8 +34,8 @@ __device__ void getReferenceFace(const SATContext& ctx, const SATResult& res, Re
 // Build incident face from reference face
 __device__ void getIncidentFace(const SATContext& ctx, const SATResult& res, const ReferenceFace& ref, IncidentFace& inc);
 
-// Cull contact points to max 4 (keeps deepest + 3 at 90 degree intervals)
+// Cull contact points to max 4 (no-op, manifold limited at construction)
 __device__ void cullContactPoints(ContactManifold& m);
 
-// Generate face-face contact manifold (Sutherland-Hodgman clipping)
+// Generate face-face contact manifold (direct edge clipping)
 __device__ void generateFaceFaceManifold(SATContext& ctx, SATResult& res, ContactManifold& m);

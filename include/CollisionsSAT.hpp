@@ -26,26 +26,20 @@ struct EdgeAxes
     int bi, b1, b2;  // B's incident and perpendicular axes
 };
 
-// Contact manifold (up to 8 points, culled to 4)
+// Contact manifold (max 4 contact points)
 struct ContactManifold
 {
     int    count = 0;
-    float  depths[8];
-    float4 points[8];
+    float  depths[4];
+    float4 points[4];
     float4 normal;
 };
 
 // Bias toward face axes when depths are similar (per Bullet physics)
 __device__ constexpr float SAT_FUDGE = 1.05f;
 
-// Project box extents onto axis
-__device__ float projectRadius(float4 L, float4 axX, float4 axY, float4 axZ);
-
 // Build SAT context from car transforms
 __device__ SATContext buildSATContext(float4 posA, float4 rotA, float4 posB, float4 rotB);
-
-// Test single SAT axis (isEdge applies fudge factor)
-__device__ void testAxis(float4 L, int axis, const SATContext& ctx, SATResult& res, bool isEdge);
 
 // Full SAT test between two cars (6 face + 9 edge axes)
 __device__ SATResult carCarSATTest(SATContext& ctx);

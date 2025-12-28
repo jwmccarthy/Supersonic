@@ -28,6 +28,8 @@ lib/
 .project
 .cproject
 .settings/
+.claude
+docs/
 
 # Clangd / LSP
 .cache/

@@ -90,208 +90,148 @@ __device__ void getIncidentFace(const SATContext& ctx, const SATResult& res, con
     setFaceVertices(inc.verts, cent, off1, off2);
 }
 
-// Project incident vertices to 2D reference plane coords + depth
-__device__ void projectIncidentVertices(ReferenceFace& ref, IncidentFace& inc, ClipPolygon& poly)
-{
-    poly.count = 4;
-    for (int i = 0; i < 4; i++)
-    {
-        float4 r = vec3::sub(inc.verts[i], ref.center);
-        poly.points[i].p = make_float2(vec3::dot(r, ref.ortho1), vec3::dot(r, ref.ortho2));
-        poly.points[i].d = -vec3::dot(r, ref.normal);  // Positive = penetrating
-    }
-}
-
-// Clip polygon against single reference edge (a=0: X, a=1: Y; s=+1/-1; h=half-extent)
-__device__ void clipIncidentEdge(ClipPolygon& poly, int a, float s, float h)
-{
-    ClipPoint pts[8];
-    int nOld = poly.count;
-    int nNew = 0;
-
-    #pragma unroll
-    for (int i = 0; i < 8; ++i)
-    {
-        if (i >= nOld)
-        {
-            continue;
-        }
-
-        ClipPoint curr = poly.points[i];
-        ClipPoint next = poly.points[(i + 1) % nOld];
-        float pC = (a == 0) ? curr.p.x : curr.p.y;
-        float pN = (a == 0) ? next.p.x : next.p.y;
-        float dC = s * pC - h;  // Signed distance (negative = inside)
-        float dN = s * pN - h;
-
-        if (dC <= 0.0f)
-        {
-            pts[nNew++] = curr;
-        }
-
-        // Add intersection if edge crosses clip line
-        if ((dC <= 0.0f) != (dN <= 0.0f))
-        {
-            float t = dC / (dC - dN);
-            pts[nNew++] = {
-                make_float2(curr.p.x + t * (next.p.x - curr.p.x),
-                            curr.p.y + t * (next.p.y - curr.p.y)),
-                curr.d + t * (next.d - curr.d)
-            };
-        }
-    }
-
-    poly.count = nNew;
-    #pragma unroll
-    for (int i = 0; i < 8; ++i)
-    {
-        poly.points[i] = pts[i];
-    }
-}
-
-// Clip incident polygon against all 4 reference edges
-__device__ void clipIncidentPoly(ClipPolygon& poly, float2 h)
-{
-    clipIncidentEdge(poly, 0, +1.0f, h.x);
-    clipIncidentEdge(poly, 0, -1.0f, h.x);
-    clipIncidentEdge(poly, 1, +1.0f, h.y);
-    clipIncidentEdge(poly, 1, -1.0f, h.y);
-}
-
-// Wrap angle difference to [-pi, pi] and return absolute value
-__device__ float angleDiff(float a, float b)
-{
-    float d = a - b;
-    if (d > 3.14159265f)
-    {
-        d -= 6.28318530f;
-    }
-    if (d < -3.14159265f)
-    {
-        d += 6.28318530f;
-    }
-    return fabsf(d);
-}
-
-// Cull to max 4 points: keep deepest + 3 at ~90 degree intervals
+// Cull to max 4 points (no-op, manifold limited to 4)
 __device__ void cullContactPoints(ContactManifold& m)
 {
-    if (m.count <= 4)
-    {
-        return;
-    }
-
-    int n = m.count;
-
-    // Find deepest point
-    int deep = 0;
-    for (int i = 1; i < n; ++i)
-    {
-        if (m.depths[i] > m.depths[deep])
-        {
-            deep = i;
-        }
-    }
-
-    // Compute centroid
-    float4 cent = make_float4(0, 0, 0, 0);
-    for (int i = 0; i < n; ++i)
-    {
-        cent = vec3::add(cent, m.points[i]);
-    }
-    cent = vec3::mult(cent, 1.0f / n);
-
-    // Build tangent frame and compute angles
-    float4 t1 = vec3::norm(vec3::sub(m.points[0], cent));
-    float4 t2 = vec3::cross(m.normal, t1);
-    float angles[8];
-    for (int i = 0; i < n; ++i)
-    {
-        float4 r = vec3::sub(m.points[i], cent);
-        angles[i] = atan2f(vec3::dot(r, t2), vec3::dot(r, t1));
-    }
-
-    // Select deepest + 3 points at 90 degree intervals
-    int  keep[4] = {deep, -1, -1, -1};
-    bool used[8] = {false};
-    used[deep] = true;
-
-    for (int j = 1; j < 4; ++j)
-    {
-        float target = angles[deep] + j * 1.57079632f;
-        int   best = -1;
-        float diff = 1e9f;
-
-        for (int i = 0; i < n; ++i)
-        {
-            if (used[i])
-            {
-                continue;
-            }
-            float d = angleDiff(angles[i], target);
-            if (d < diff)
-            {
-                diff = d;
-                best = i;
-            }
-        }
-
-        if (best >= 0)
-        {
-            keep[j] = best;
-            used[best] = true;
-        }
-    }
-
-    // Compact kept points
-    int out = 0;
-    for (int j = 0; j < 4; ++j)
-    {
-        if (keep[j] < 0)
-        {
-            continue;
-        }
-        m.points[out] = m.points[keep[j]];
-        m.depths[out] = m.depths[keep[j]];
-        out++;
-    }
-    m.count = out;
+    (void)m;
 }
 
-// Convert clipped 2D polygon to 3D contact manifold (only penetrating points)
-__device__ void reconstructContactManifold(ClipPolygon& poly, ReferenceFace& ref, ContactManifold& m)
+// Add a contact point to manifold, keeping the 4 deepest
+__device__ void addContactPoint(ContactManifold& m, float4 pt, float depth)
 {
-    for (int i = 0; i < poly.count; ++i)
+    if (depth <= 0.0f) return;  // Not penetrating
+
+    if (m.count < 4)
     {
-        float  d = poly.points[i].d;
-        float2 p = poly.points[i].p;
-
-        if (d <= 0.0f || m.count >= 8)
-        {
-            continue;
-        }
-
-        // Project 2D back to 3D, offset by depth for contact point
-        float4 refP = vec3::add(ref.center,
-            vec3::add(vec3::mult(ref.ortho1, p.x), vec3::mult(ref.ortho2, p.y)));
-        m.points[m.count] = vec3::sub(refP, vec3::mult(ref.normal, d));
-        m.depths[m.count] = d;
-        m.normal = ref.normal;
+        m.points[m.count] = pt;
+        m.depths[m.count] = depth;
         m.count++;
     }
+    else
+    {
+        // Replace shallowest if this is deeper
+        int minIdx = 0;
+        float minD = m.depths[0];
+        #pragma unroll
+        for (int j = 1; j < 4; ++j)
+        {
+            if (m.depths[j] < minD)
+            {
+                minD = m.depths[j];
+                minIdx = j;
+            }
+        }
+        if (depth > minD)
+        {
+            m.points[minIdx] = pt;
+            m.depths[minIdx] = depth;
+        }
+    }
 }
 
-// Face-face manifold via Sutherland-Hodgman clipping
+// Clip a single edge against reference rectangle using Liang-Barsky algorithm
+// Returns true if any part of the edge is inside, with t0/t1 as parametric bounds
+__device__ bool clipEdgeLiangBarsky(float2 p0, float2 p1, float2 h, float& t0, float& t1)
+{
+    float dx = p1.x - p0.x;
+    float dy = p1.y - p0.y;
+    t0 = 0.0f;
+    t1 = 1.0f;
+
+    // Clip against all 4 edges: -h.x, +h.x, -h.y, +h.y
+    float p[4] = {-dx, dx, -dy, dy};
+    float q[4] = {p0.x + h.x, h.x - p0.x, p0.y + h.y, h.y - p0.y};
+
+    #pragma unroll
+    for (int i = 0; i < 4; ++i)
+    {
+        if (fabsf(p[i]) < 1e-8f)
+        {
+            // Edge parallel to clip boundary
+            if (q[i] < 0.0f) return false;  // Outside
+        }
+        else
+        {
+            float t = q[i] / p[i];
+            if (p[i] < 0.0f)
+            {
+                // Entering
+                if (t > t0) t0 = t;
+            }
+            else
+            {
+                // Leaving
+                if (t < t1) t1 = t;
+            }
+        }
+    }
+
+    return t0 <= t1;
+}
+
+// Process one incident edge: clip against reference rect and add contacts
+__device__ void processIncidentEdge(
+    float2 p0, float d0, float2 p1, float d1,
+    const ReferenceFace& ref, ContactManifold& m)
+{
+    float t0, t1;
+    if (!clipEdgeLiangBarsky(p0, p1, ref.halfEx, t0, t1))
+        return;  // Edge entirely outside
+
+    // Interpolate clipped endpoints
+    float2 cp0 = make_float2(p0.x + t0 * (p1.x - p0.x), p0.y + t0 * (p1.y - p0.y));
+    float2 cp1 = make_float2(p0.x + t1 * (p1.x - p0.x), p0.y + t1 * (p1.y - p0.y));
+    float cd0 = d0 + t0 * (d1 - d0);
+    float cd1 = d0 + t1 * (d1 - d0);
+
+    // Convert to 3D and add to manifold
+    if (cd0 > 0.0f)
+    {
+        float4 pt = vec3::add(ref.center,
+            vec3::add(vec3::mult(ref.ortho1, cp0.x), vec3::mult(ref.ortho2, cp0.y)));
+        pt = vec3::sub(pt, vec3::mult(ref.normal, cd0));
+        addContactPoint(m, pt, cd0);
+    }
+
+    // Only add second point if it's different from first (t0 != t1)
+    if (t1 > t0 + 1e-6f && cd1 > 0.0f)
+    {
+        float4 pt = vec3::add(ref.center,
+            vec3::add(vec3::mult(ref.ortho1, cp1.x), vec3::mult(ref.ortho2, cp1.y)));
+        pt = vec3::sub(pt, vec3::mult(ref.normal, cd1));
+        addContactPoint(m, pt, cd1);
+    }
+}
+
+// Face-face manifold via Liang-Barsky edge clipping
 __device__ void generateFaceFaceManifold(SATContext& ctx, SATResult& res, ContactManifold& m)
 {
     ReferenceFace ref;
     IncidentFace  inc;
-    ClipPolygon   poly;
 
     getReferenceFace(ctx, res, ref);
     getIncidentFace(ctx, res, ref, inc);
-    projectIncidentVertices(ref, inc, poly);
-    clipIncidentPoly(poly, ref.halfEx);
-    reconstructContactManifold(poly, ref, m);
-    cullContactPoints(m);
+
+    m.normal = ref.normal;
+    m.count = 0;
+
+    // Project incident vertices to 2D + depth (small local arrays)
+    float2 p2d[4];
+    float  depths[4];
+
+    #pragma unroll
+    for (int i = 0; i < 4; ++i)
+    {
+        float4 r = vec3::sub(inc.verts[i], ref.center);
+        p2d[i] = make_float2(vec3::dot(r, ref.ortho1), vec3::dot(r, ref.ortho2));
+        depths[i] = -vec3::dot(r, ref.normal);  // Positive = penetrating
+    }
+
+    // Process each edge of the incident face
+    #pragma unroll
+    for (int i = 0; i < 4; ++i)
+    {
+        int j = (i + 1) & 3;  // Next vertex (mod 4)
+        processIncidentEdge(p2d[i], depths[i], p2d[j], depths[j], ref, m);
+    }
 }

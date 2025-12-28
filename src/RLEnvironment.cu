@@ -21,7 +21,6 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 
 float* RLEnvironment::step()
 {
-    // One thread per collision pair
     int nCar   = numB + numO;
     int nPairs = nCar * (nCar - 1) / 2;
     int nTotal = sims * nPairs;

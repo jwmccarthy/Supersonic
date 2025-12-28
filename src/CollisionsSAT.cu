@@ -2,15 +2,6 @@
 #include "CudaMath.hpp"
 #include "RLConstants.hpp"
 
-// Project box half-extents onto axis L
-// Returns sum of |L . axis| * extent for each axis
-__device__ float projectRadius(float4 L, float4 axX, float4 axY, float4 axZ)
-{
-    return CAR_HALF_EX.x * fabsf(vec3::dot(L, axX)) +
-           CAR_HALF_EX.y * fabsf(vec3::dot(L, axY)) +
-           CAR_HALF_EX.z * fabsf(vec3::dot(L, axZ));
-}
-
 // Build SAT context: transform everything into car A's local space
 // This simplifies axis testing since A's axes become world axes
 __device__ SATContext buildSATContext(float4 posA, float4 rotA, float4 posB, float4 rotB)
@@ -36,73 +27,125 @@ __device__ SATContext buildSATContext(float4 posA, float4 rotA, float4 posB, flo
     return ctx;
 }
 
-// Test single separating axis
-// Updates res if this axis has shallower penetration
-__device__ void testAxis(float4 L, int axis, const SATContext& ctx, SATResult& res, bool isEdge)
-{
-    // Edge axes need normalization (cross products aren't unit length)
-    if (isEdge)
-    {
-        float lenSq = vec3::dot(L, L);
-        if (lenSq < 1e-6f)
-        {
-            return;  // Parallel edges, skip degenerate axis
-        }
-        L = vec3::mult(L, rsqrtf(lenSq));
-    }
-
-    // Orient L to point from A toward B
-    float d = vec3::dot(L, ctx.vecAB);
-    L = vec3::mult(L, sign(d));
-
-    // Project both car radii onto L
-    float r = projectRadius(L, WORLD_X, WORLD_Y, WORLD_Z) +
-              projectRadius(L, ctx.axB[0], ctx.axB[1], ctx.axB[2]);
-
-    // Penetration depth: positive = overlap, negative = separation
-    float depth = r - d;
-
-    // Edge axes get fudge factor to prefer face contacts when similar depth
-    float fudge = isEdge ? (depth * SAT_FUDGE) : depth;
-
-    // Track shallowest penetration (minimum separation axis)
-    if (fudge < res.depth)
-    {
-        res.depth   = depth;
-        res.bestAx  = L;
-        res.axisIdx = axis;
-    }
-
-    // Any negative depth means boxes are separated
-    if (depth < 0.0f)
-    {
-        res.overlap = false;
-    }
-}
-
-// Full SAT test: 6 face normals + 9 edge cross products
+// SAT test between two car OBBs (6 face + 9 edge axes)
 __device__ SATResult carCarSATTest(SATContext& ctx)
 {
     SATResult res;
 
-    // Test face normals (3 from A + 3 from B)
-    #pragma unroll
-    for (int i = 0; i < 3; ++i)
-    {
-        testAxis(WORLD_AXES[i], i,     ctx, res, false);
-        testAxis(ctx.axB[i],    i + 3, ctx, res, false);
-    }
+    // Precompute absolute values of B's axes for faster projections
+    float3 absB0 = make_float3(fabsf(ctx.axB[0].x), fabsf(ctx.axB[0].y), fabsf(ctx.axB[0].z));
+    float3 absB1 = make_float3(fabsf(ctx.axB[1].x), fabsf(ctx.axB[1].y), fabsf(ctx.axB[1].z));
+    float3 absB2 = make_float3(fabsf(ctx.axB[2].x), fabsf(ctx.axB[2].y), fabsf(ctx.axB[2].z));
 
-    // Test edge-edge cross products (3x3 = 9 axes)
-    #pragma unroll
-    for (int i = 0; i < 3; ++i)
+    // ============ FACE AXES (0-5) ============
+    // A's face axes (WORLD_X, WORLD_Y, WORLD_Z) - simplified projection
+
+    // Axis 0: WORLD_X
     {
-        #pragma unroll
-        for (int j = 0; j < 3; ++j)
-        {
-            testAxis(vec3::cross(WORLD_AXES[i], ctx.axB[j]), 6 + i * 3 + j, ctx, res, true);
+        float d = fabsf(ctx.vecAB.x);
+        float rA = CAR_HALF_EX.x;
+        float rB = CAR_HALF_EX.x * absB0.x + CAR_HALF_EX.y * absB1.x + CAR_HALF_EX.z * absB2.x;
+        float depth = rA + rB - d;
+        if (depth < 0.0f) res.overlap = false;
+        if (depth < res.depth) {
+            res.depth = depth;
+            res.bestAx = (ctx.vecAB.x >= 0) ? WORLD_X : make_float4(-1, 0, 0, 0);
+            res.axisIdx = 0;
         }
     }
+
+    // Axis 1: WORLD_Y
+    {
+        float d = fabsf(ctx.vecAB.y);
+        float rA = CAR_HALF_EX.y;
+        float rB = CAR_HALF_EX.x * absB0.y + CAR_HALF_EX.y * absB1.y + CAR_HALF_EX.z * absB2.y;
+        float depth = rA + rB - d;
+        if (depth < 0.0f) res.overlap = false;
+        if (depth < res.depth) {
+            res.depth = depth;
+            res.bestAx = (ctx.vecAB.y >= 0) ? WORLD_Y : make_float4(0, -1, 0, 0);
+            res.axisIdx = 1;
+        }
+    }
+
+    // Axis 2: WORLD_Z
+    {
+        float d = fabsf(ctx.vecAB.z);
+        float rA = CAR_HALF_EX.z;
+        float rB = CAR_HALF_EX.x * absB0.z + CAR_HALF_EX.y * absB1.z + CAR_HALF_EX.z * absB2.z;
+        float depth = rA + rB - d;
+        if (depth < 0.0f) res.overlap = false;
+        if (depth < res.depth) {
+            res.depth = depth;
+            res.bestAx = (ctx.vecAB.z >= 0) ? WORLD_Z : make_float4(0, 0, -1, 0);
+            res.axisIdx = 2;
+        }
+    }
+
+    // B's face axes (3-5) - need full projection
+    #pragma unroll
+    for (int i = 0; i < 3; i++)
+    {
+        float4 L = ctx.axB[i];
+        float d = vec3::dot(L, ctx.vecAB);
+        float s = sign(d);
+        d = fabsf(d);
+
+        // Project A onto L (A's axes are world-aligned)
+        float rA = CAR_HALF_EX.x * fabsf(L.x) + CAR_HALF_EX.y * fabsf(L.y) + CAR_HALF_EX.z * fabsf(L.z);
+        // Project B onto L (L is one of B's axes, so projection is just the half-extent)
+        float rB = CAR_HALF_EX_ARR[i];
+
+        float depth = rA + rB - d;
+        if (depth < 0.0f) res.overlap = false;
+        if (depth < res.depth) {
+            res.depth = depth;
+            res.bestAx = vec3::mult(L, s);
+            res.axisIdx = 3 + i;
+        }
+    }
+
+    // Early exit if separated on face axes
+    if (!res.overlap) return res;
+
+    // ============ EDGE AXES (6-14) ============
+    // Cross products of A's edges (world axes) with B's edges
+
+    #pragma unroll
+    for (int ai = 0; ai < 3; ai++)
+    {
+        #pragma unroll
+        for (int bi = 0; bi < 3; bi++)
+        {
+            float4 L = vec3::cross(WORLD_AXES[ai], ctx.axB[bi]);
+            float lenSq = vec3::dot(L, L);
+
+            // Skip near-parallel edges
+            if (lenSq < 1e-6f) continue;
+
+            L = vec3::mult(L, rsqrtf(lenSq));
+            float d = vec3::dot(L, ctx.vecAB);
+            float s = sign(d);
+            d = fabsf(d);
+
+            float rA = CAR_HALF_EX.x * fabsf(L.x) + CAR_HALF_EX.y * fabsf(L.y) + CAR_HALF_EX.z * fabsf(L.z);
+            float rB = CAR_HALF_EX.x * fabsf(vec3::dot(L, ctx.axB[0])) +
+                       CAR_HALF_EX.y * fabsf(vec3::dot(L, ctx.axB[1])) +
+                       CAR_HALF_EX.z * fabsf(vec3::dot(L, ctx.axB[2]));
+
+            float depth = rA + rB - d;
+            if (depth < 0.0f) res.overlap = false;
+
+            // Apply fudge factor for edge axes (prefer face contacts)
+            float fudge = depth * SAT_FUDGE;
+            if (fudge < res.depth) {
+                res.depth = depth;
+                res.bestAx = vec3::mult(L, s);
+                res.axisIdx = 6 + ai * 3 + bi;
+            }
+        }
+    }
+
     return res;
 }
 

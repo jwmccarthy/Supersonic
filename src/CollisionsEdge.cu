@@ -3,8 +3,7 @@
 #include "CollisionsSAT.hpp"
 #include "CollisionsEdge.hpp"
 
-// Compute offset along axis toward other car's center
-// Used to find the edge closest to the other car
+// Offset along axis toward other car's center
 __device__ float4 axisOffset(float4 vecAB, float4 axis, int idx)
 {
     return vec3::mult(axis, sign(vec3::dot(vecAB, axis)) * CAR_HALF_EX_ARR[idx]);
@@ -20,8 +19,7 @@ __device__ float4 edgeCenter(float4 vecAB, const float4* axes, int i1, int i2, f
     );
 }
 
-// Get edge center points for both cars
-// These are the midpoints of the colliding edges
+// Get edge midpoints for both cars
 __device__ EdgePoints getEdgeCenters(const SATContext& ctx, const EdgeAxes& ax)
 {
     EdgePoints ep;
@@ -30,8 +28,7 @@ __device__ EdgePoints getEdgeCenters(const SATContext& ctx, const EdgeAxes& ax)
     return ep;
 }
 
-// Find closest point on edge B to edge A
-// Uses line-line closest point formula
+// Closest point on edge B to edge A
 __device__ float4 getEdgeContactPoint(const EdgePoints& ep, float4 dA, float4 dB)
 {
     float4 r = vec3::sub(ep.pB, ep.pA);
@@ -48,8 +45,7 @@ __device__ float4 getEdgeContactPoint(const EdgePoints& ep, float4 dA, float4 dB
     return vec3::add(ep.pB, vec3::mult(dB, (n * a - b) / d));
 }
 
-// Generate edge-edge contact manifold
-// Edge contacts always produce exactly one contact point
+// Edge-edge manifold (single contact point)
 __device__ void generateEdgeEdgeManifold(SATContext& ctx, SATResult& res, ContactManifold& m)
 {
     EdgeAxes   ax = getEdgeAxes(res.axisIdx);
