@@ -1,4 +1,9 @@
 #!/bin/bash
-# Profile kernels with ncu
+
 cd "$(dirname "$0")/build"
-ncu --set full ./supersonic
+
+if [[ "$1" == "-v" ]]; then
+    ncu --set full ./supersonic
+else
+    ncu --metrics gpu__time_duration.avg ./supersonic
+fi

@@ -43,7 +43,7 @@ namespace vec3
         );
     }
 
-    // Normalize a vector on first 3 components
+    // Normalize xyz components
     __device__ __forceinline__ float4 norm(float4 v)
     {
         float lenSq = vec3::dot(v, v);
@@ -51,7 +51,7 @@ namespace vec3
         return vec3::mult(v, rsqrtf(lenSq));
     }
 
-    // Normalize with length² output for degeneracy checks
+    // Normalize with length² output
     __device__ __forceinline__ float4 norm(float4 v, float& lenSq)
     {
         lenSq = vec3::dot(v, v);
