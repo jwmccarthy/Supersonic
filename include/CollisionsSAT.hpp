@@ -69,13 +69,14 @@ __device__ __forceinline__ bool testAxis(
     float s = sign(d);
     d = fabsf(d);
     float depth = rA + rB - d;
-    if (depth < 0.0f) return false;
+
     if (depth * fudge < res.depth) {
         res.depth = depth;
         res.bestAx = vec3::mult(axis, s);
         res.axisIdx = axisIdx;
     }
-    return true;
+
+    return depth > 0.0f;
 }
 
 __device__ SATContext buildSATContext(float4 posA, float4 rotA, float4 posB, float4 rotB);
