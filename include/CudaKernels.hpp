@@ -5,4 +5,5 @@
 #include "GameState.hpp"
 
 __global__ void resetKernel(GameState* state);
+
 __global__ void collisionKernel(GameState* state);

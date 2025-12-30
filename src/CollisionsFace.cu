@@ -72,15 +72,17 @@ __device__ void getReferenceFace(const SATContext& ctx, const SATResult& res, Re
 // Build incident face (most antiparallel to reference normal)
 __device__ void getIncidentFace(const SATContext& ctx, const SATResult& res, const ReferenceFace& ref, IncidentFace& inc)
 {
-    float b = (float)(res.axisIdx >= 3);  // b=0: incident is B, b=1: incident is A
+    float dot;
+
+    // b=0: incident is B, b=1: incident is A
+    float b = (float)(res.axisIdx >= 3);
     const float4* axes = (b < 0.5f) ? ctx.axB : WORLD_AXES;
     float4 orig = vec3::mult(ctx.vecAB, 1.0f - b);
 
     // Find face most antiparallel to reference normal
-    float  dot;
-    int    idx = findIncidentAxis(ref.normal, axes, dot);
-    int    t1  = (idx + 1) % 3;
-    int    t2  = (idx + 2) % 3;
+    int idx = findIncidentAxis(ref.normal, axes, dot);
+    int t1  = (idx + 1) % 3;
+    int t2  = (idx + 2) % 3;
 
     // Incident face center and vertices
     float4 norm = vec3::mult(axes[idx], -sign(dot));
@@ -88,12 +90,6 @@ __device__ void getIncidentFace(const SATContext& ctx, const SATResult& res, con
     float4 off1 = vec3::mult(axes[t1], CAR_HALF_EX_ARR[t1]);
     float4 off2 = vec3::mult(axes[t2], CAR_HALF_EX_ARR[t2]);
     setFaceVertices(inc.verts, cent, off1, off2);
-}
-
-// Cull to max 4 points (no-op, manifold limited to 4)
-__device__ void cullContactPoints(ContactManifold& m)
-{
-    (void)m;
 }
 
 // Add a contact point to manifold, keeping the 4 deepest
@@ -112,6 +108,7 @@ __device__ void addContactPoint(ContactManifold& m, float4 pt, float depth)
         // Replace shallowest if this is deeper
         int minIdx = 0;
         float minD = m.depths[0];
+
         #pragma unroll
         for (int j = 1; j < 4; ++j)
         {
@@ -121,6 +118,7 @@ __device__ void addContactPoint(ContactManifold& m, float4 pt, float depth)
                 minIdx = j;
             }
         }
+        
         if (depth > minD)
         {
             m.points[minIdx] = pt;

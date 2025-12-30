@@ -34,8 +34,5 @@ __device__ void getReferenceFace(const SATContext& ctx, const SATResult& res, Re
 // Build incident face from reference face
 __device__ void getIncidentFace(const SATContext& ctx, const SATResult& res, const ReferenceFace& ref, IncidentFace& inc);
 
-// Cull contact points to max 4 (no-op, manifold limited at construction)
-__device__ void cullContactPoints(ContactManifold& m);
-
 // Generate face-face contact manifold (direct edge clipping)
 __device__ void generateFaceFaceManifold(SATContext& ctx, SATResult& res, ContactManifold& m);

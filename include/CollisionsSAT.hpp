@@ -80,5 +80,7 @@ __device__ __forceinline__ bool testAxis(
 }
 
 __device__ SATContext buildSATContext(float4 posA, float4 rotA, float4 posB, float4 rotB);
+
 __device__ SATResult carCarSATTest(SATContext& ctx);
+
 __device__ EdgeAxes getEdgeAxes(int axisIdx);

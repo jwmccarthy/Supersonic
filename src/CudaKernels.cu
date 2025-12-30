@@ -65,6 +65,7 @@ void collisionKernel(GameState* state)
         {
             generateEdgeEdgeManifold(ctx, res, m);
         }
+        
         // TODO: Store manifold for physics resolution
         (void)m;
     }
