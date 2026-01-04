@@ -1,9 +1,9 @@
 #include <cuda_runtime.h>
 
-#include "StateReset.hpp"
+#include "StateReset.cuh"
 #include "GameState.hpp"
-#include "CudaUtils.hpp"
-#include "RLConstants.hpp"
+#include "CudaUtils.cuh"
+#include "RLConstants.cuh"
 
 __device__ void resetBall(Ball* ball, int simIdx)
 {

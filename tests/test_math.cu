@@ -1,511 +1,739 @@
-#include <cmath>
-#include <cuda_runtime.h>
 #include <gtest/gtest.h>
+#include <cuda_runtime.h>
+#include <cmath>
 
-#include "CudaMath.hpp"
+#include "CudaMath.cuh"
+#include "CudaCommon.hpp"
 
-// ============================================================================
-// Test result structure for GPU -> CPU transfer
-// ============================================================================
+// Helper to compare floats with tolerance
+constexpr float EPSILON = 1e-5f;
 
-struct MathTestResult
+bool approxEqual(float a, float b, float eps = EPSILON)
 {
-    float4 vec;
-    float  scalar;
-};
-
-// ============================================================================
-// CUDA test kernels
-// ============================================================================
-
-__global__ void runQuatRotationTest(float4 v, float4 q, MathTestResult* result)
-{
-    result->vec = quat::mult(v, q);
+    return fabsf(a - b) < eps;
 }
 
-__global__ void runQuatComposeTest(float4 a, float4 b, MathTestResult* result)
+bool approxEqual(float4 a, float4 b, float eps = EPSILON)
 {
-    result->vec = quat::comp(a, b);
-}
-
-__global__ void runQuatConjTest(float4 q, MathTestResult* result)
-{
-    result->vec = quat::conj(q);
-}
-
-__global__ void runQuatNormTest(float4 q, MathTestResult* result)
-{
-    result->vec = quat::norm(q);
-    result->scalar = sqrtf(vec4::dot(result->vec, result->vec));
-}
-
-__global__ void runCrossProductTest(float4 a, float4 b, MathTestResult* result)
-{
-    result->vec = vec3::cross(a, b);
-}
-
-__global__ void runDotProductTest(float4 a, float4 b, MathTestResult* result)
-{
-    result->scalar = vec3::dot(a, b);
-}
-
-__global__ void runVec4DotProductTest(float4 a, float4 b, MathTestResult* result)
-{
-    result->scalar = vec4::dot(a, b);
-}
-
-__global__ void runNormalizationTest(float4 v, MathTestResult* result)
-{
-    result->vec = vec3::norm(v);
-    result->scalar = sqrtf(vec3::dot(result->vec, result->vec));
-}
-
-__global__ void runVec3AddTest(float4 a, float4 b, MathTestResult* result)
-{
-    result->vec = vec3::add(a, b);
-}
-
-__global__ void runVec3SubTest(float4 a, float4 b, MathTestResult* result)
-{
-    result->vec = vec3::sub(a, b);
-}
-
-__global__ void runVec3MultTest(float4 v, float s, MathTestResult* result)
-{
-    result->vec = vec3::mult(v, s);
+    return approxEqual(a.x, b.x, eps) &&
+           approxEqual(a.y, b.y, eps) &&
+           approxEqual(a.z, b.z, eps) &&
+           approxEqual(a.w, b.w, eps);
 }
 
 // ============================================================================
-// Helper functions to run GPU tests
+// Sign function tests
 // ============================================================================
 
-MathTestResult runQuatRotation(float4 v, float4 q)
+__global__ void testSignKernel(float* input, float* output, int n)
 {
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runQuatRotationTest<<<1, 1>>>(v, q, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n)
+    {
+        output[idx] = sign(input[idx]);
+    }
 }
 
-MathTestResult runQuatCompose(float4 a, float4 b)
+TEST(SignTest, PositiveValues)
 {
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runQuatComposeTest<<<1, 1>>>(a, b, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
+    float h_input[] = {1.0f, 0.5f, 100.0f, 0.001f};
+    float h_output[4];
+    float *d_input, *d_output;
+
+    CUDA_CHECK(cudaMalloc(&d_input, 4 * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_output, 4 * sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(d_input, h_input, 4 * sizeof(float), cudaMemcpyHostToDevice));
+
+    testSignKernel<<<1, 4>>>(d_input, d_output, 4);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(h_output, d_output, 4 * sizeof(float), cudaMemcpyDeviceToHost));
+
+    for (int i = 0; i < 4; i++)
+    {
+        EXPECT_FLOAT_EQ(h_output[i], 1.0f);
+    }
+
+    cudaFree(d_input);
+    cudaFree(d_output);
 }
 
-MathTestResult runQuatConj(float4 q)
+TEST(SignTest, NegativeValues)
 {
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runQuatConjTest<<<1, 1>>>(q, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
+    float h_input[] = {-1.0f, -0.5f, -100.0f, -0.001f};
+    float h_output[4];
+    float *d_input, *d_output;
+
+    CUDA_CHECK(cudaMalloc(&d_input, 4 * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_output, 4 * sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(d_input, h_input, 4 * sizeof(float), cudaMemcpyHostToDevice));
+
+    testSignKernel<<<1, 4>>>(d_input, d_output, 4);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(h_output, d_output, 4 * sizeof(float), cudaMemcpyDeviceToHost));
+
+    for (int i = 0; i < 4; i++)
+    {
+        EXPECT_FLOAT_EQ(h_output[i], -1.0f);
+    }
+
+    cudaFree(d_input);
+    cudaFree(d_output);
 }
 
-MathTestResult runQuatNorm(float4 q)
+TEST(SignTest, Zero)
 {
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runQuatNormTest<<<1, 1>>>(q, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
-}
+    float h_input = 0.0f;
+    float h_output;
+    float *d_input, *d_output;
 
-MathTestResult runCrossProduct(float4 a, float4 b)
-{
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runCrossProductTest<<<1, 1>>>(a, b, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
-}
+    CUDA_CHECK(cudaMalloc(&d_input, sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_output, sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(d_input, &h_input, sizeof(float), cudaMemcpyHostToDevice));
 
-MathTestResult runDotProduct(float4 a, float4 b)
-{
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runDotProductTest<<<1, 1>>>(a, b, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
-}
+    testSignKernel<<<1, 1>>>(d_input, d_output, 1);
+    CUDA_CHECK(cudaDeviceSynchronize());
 
-MathTestResult runVec4DotProduct(float4 a, float4 b)
-{
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runVec4DotProductTest<<<1, 1>>>(a, b, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
-}
+    CUDA_CHECK(cudaMemcpy(&h_output, d_output, sizeof(float), cudaMemcpyDeviceToHost));
 
-MathTestResult runNormalization(float4 v)
-{
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runNormalizationTest<<<1, 1>>>(v, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
-}
+    EXPECT_FLOAT_EQ(h_output, 1.0f);
 
-MathTestResult runVec3Add(float4 a, float4 b)
-{
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runVec3AddTest<<<1, 1>>>(a, b, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
-}
-
-MathTestResult runVec3Sub(float4 a, float4 b)
-{
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runVec3SubTest<<<1, 1>>>(a, b, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
-}
-
-MathTestResult runVec3Mult(float4 v, float s)
-{
-    MathTestResult* d_result;
-    MathTestResult h_result;
-    
-    cudaMalloc(&d_result, sizeof(MathTestResult));
-    runVec3MultTest<<<1, 1>>>(v, s, d_result);
-    cudaDeviceSynchronize();
-    cudaMemcpy(&h_result, d_result, sizeof(MathTestResult), cudaMemcpyDeviceToHost);
-    cudaFree(d_result);
-    
-    return h_result;
+    cudaFree(d_input);
+    cudaFree(d_output);
 }
 
 // ============================================================================
-// Vec3 Tests
+// Vec3 tests
 // ============================================================================
 
-class Vec3Test : public ::testing::Test {};
-
-TEST_F(Vec3Test, Add)
+__global__ void testVec3AddKernel(float4* a, float4* b, float4* result)
 {
-    float4 a = make_float4(1, 2, 3, 0);
-    float4 b = make_float4(4, 5, 6, 0);
-    
-    auto result = runVec3Add(a, b);
-    
-    EXPECT_NEAR(result.vec.x, 5.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 7.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, 9.0f, 0.001f);
+    result[0] = vec3::add(a[0], b[0]);
 }
 
-TEST_F(Vec3Test, Sub)
+__global__ void testVec3SubKernel(float4* a, float4* b, float4* result)
 {
-    float4 a = make_float4(5, 7, 9, 0);
-    float4 b = make_float4(1, 2, 3, 0);
-    
-    auto result = runVec3Sub(a, b);
-    
-    EXPECT_NEAR(result.vec.x, 4.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 5.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, 6.0f, 0.001f);
+    result[0] = vec3::sub(a[0], b[0]);
 }
 
-TEST_F(Vec3Test, ScalarMult)
+__global__ void testVec3MultKernel(float4* v, float s, float4* result)
 {
-    float4 v = make_float4(1, 2, 3, 0);
-    
-    auto result = runVec3Mult(v, 2.0f);
-    
-    EXPECT_NEAR(result.vec.x, 2.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 4.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, 6.0f, 0.001f);
+    result[0] = vec3::mult(v[0], s);
 }
 
-TEST_F(Vec3Test, DotProduct)
+__global__ void testVec3DotKernel(float4* a, float4* b, float* result)
 {
-    float4 a = make_float4(1, 2, 3, 0);
-    float4 b = make_float4(4, 5, 6, 0);
-    
-    auto result = runDotProduct(a, b);
-    
+    result[0] = vec3::dot(a[0], b[0]);
+}
+
+__global__ void testVec3CrossKernel(float4* a, float4* b, float4* result)
+{
+    result[0] = vec3::cross(a[0], b[0]);
+}
+
+__global__ void testVec3NormKernel(float4* v, float4* result)
+{
+    result[0] = vec3::norm(v[0]);
+}
+
+TEST(Vec3Test, Add)
+{
+    float4 h_a = make_float4(1.0f, 2.0f, 3.0f, 0.0f);
+    float4 h_b = make_float4(4.0f, 5.0f, 6.0f, 0.0f);
+    float4 h_result;
+    float4 *d_a, *d_b, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_b, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec3AddKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result.x, 5.0f);
+    EXPECT_FLOAT_EQ(h_result.y, 7.0f);
+    EXPECT_FLOAT_EQ(h_result.z, 9.0f);
+    EXPECT_FLOAT_EQ(h_result.w, 0.0f);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
+}
+
+TEST(Vec3Test, Sub)
+{
+    float4 h_a = make_float4(5.0f, 7.0f, 9.0f, 0.0f);
+    float4 h_b = make_float4(1.0f, 2.0f, 3.0f, 0.0f);
+    float4 h_result;
+    float4 *d_a, *d_b, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_b, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec3SubKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result.x, 4.0f);
+    EXPECT_FLOAT_EQ(h_result.y, 5.0f);
+    EXPECT_FLOAT_EQ(h_result.z, 6.0f);
+    EXPECT_FLOAT_EQ(h_result.w, 0.0f);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
+}
+
+TEST(Vec3Test, Mult)
+{
+    float4 h_v = make_float4(1.0f, 2.0f, 3.0f, 0.0f);
+    float h_s = 2.5f;
+    float4 h_result;
+    float4 *d_v, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_v, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_v, &h_v, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec3MultKernel<<<1, 1>>>(d_v, h_s, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result.x, 2.5f);
+    EXPECT_FLOAT_EQ(h_result.y, 5.0f);
+    EXPECT_FLOAT_EQ(h_result.z, 7.5f);
+    EXPECT_FLOAT_EQ(h_result.w, 0.0f);
+
+    cudaFree(d_v);
+    cudaFree(d_result);
+}
+
+TEST(Vec3Test, Dot)
+{
+    float4 h_a = make_float4(1.0f, 2.0f, 3.0f, 0.0f);
+    float4 h_b = make_float4(4.0f, 5.0f, 6.0f, 0.0f);
+    float h_result;
+    float4 *d_a, *d_b;
+    float *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_b, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec3DotKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float), cudaMemcpyDeviceToHost));
+
     // 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32
-    EXPECT_NEAR(result.scalar, 32.0f, 0.001f);
+    EXPECT_FLOAT_EQ(h_result, 32.0f);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
 }
 
-TEST_F(Vec3Test, DotProductOrthogonal)
+TEST(Vec3Test, DotOrthogonal)
 {
-    float4 x = make_float4(1, 0, 0, 0);
-    float4 y = make_float4(0, 1, 0, 0);
-    
-    auto result = runDotProduct(x, y);
-    
-    EXPECT_NEAR(result.scalar, 0.0f, 0.001f);
+    float4 h_a = make_float4(1.0f, 0.0f, 0.0f, 0.0f);
+    float4 h_b = make_float4(0.0f, 1.0f, 0.0f, 0.0f);
+    float h_result;
+    float4 *d_a, *d_b;
+    float *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_b, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec3DotKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result, 0.0f);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
 }
 
-TEST_F(Vec3Test, CrossProductXY)
+TEST(Vec3Test, Cross)
 {
-    float4 x = make_float4(1, 0, 0, 0);
-    float4 y = make_float4(0, 1, 0, 0);
-    
-    auto result = runCrossProduct(x, y);
-    
-    // X cross Y = Z
-    EXPECT_NEAR(result.vec.x, 0.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 0.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, 1.0f, 0.001f);
+    // i x j = k
+    float4 h_a = make_float4(1.0f, 0.0f, 0.0f, 0.0f);
+    float4 h_b = make_float4(0.0f, 1.0f, 0.0f, 0.0f);
+    float4 h_result;
+    float4 *d_a, *d_b, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_b, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec3CrossKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result.x, 0.0f);
+    EXPECT_FLOAT_EQ(h_result.y, 0.0f);
+    EXPECT_FLOAT_EQ(h_result.z, 1.0f);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
 }
 
-TEST_F(Vec3Test, CrossProductYZ)
+TEST(Vec3Test, CrossAnticommutative)
 {
-    float4 y = make_float4(0, 1, 0, 0);
-    float4 z = make_float4(0, 0, 1, 0);
-    
-    auto result = runCrossProduct(y, z);
-    
-    // Y cross Z = X
-    EXPECT_NEAR(result.vec.x, 1.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 0.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, 0.0f, 0.001f);
+    // j x i = -k
+    float4 h_a = make_float4(0.0f, 1.0f, 0.0f, 0.0f);
+    float4 h_b = make_float4(1.0f, 0.0f, 0.0f, 0.0f);
+    float4 h_result;
+    float4 *d_a, *d_b, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_b, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec3CrossKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result.x, 0.0f);
+    EXPECT_FLOAT_EQ(h_result.y, 0.0f);
+    EXPECT_FLOAT_EQ(h_result.z, -1.0f);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
 }
 
-TEST_F(Vec3Test, CrossProductZX)
+TEST(Vec3Test, Norm)
 {
-    float4 z = make_float4(0, 0, 1, 0);
-    float4 x = make_float4(1, 0, 0, 0);
-    
-    auto result = runCrossProduct(z, x);
-    
-    // Z cross X = Y
-    EXPECT_NEAR(result.vec.x, 0.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 1.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, 0.0f, 0.001f);
+    float4 h_v = make_float4(3.0f, 4.0f, 0.0f, 0.0f);
+    float4 h_result;
+    float4 *d_v, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_v, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_v, &h_v, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec3NormKernel<<<1, 1>>>(d_v, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    // Length is 5, so normalized is (0.6, 0.8, 0)
+    EXPECT_NEAR(h_result.x, 0.6f, EPSILON);
+    EXPECT_NEAR(h_result.y, 0.8f, EPSILON);
+    EXPECT_NEAR(h_result.z, 0.0f, EPSILON);
+
+    // Verify unit length
+    float len = sqrtf(h_result.x * h_result.x +
+                      h_result.y * h_result.y +
+                      h_result.z * h_result.z);
+    EXPECT_NEAR(len, 1.0f, EPSILON);
+
+    cudaFree(d_v);
+    cudaFree(d_result);
 }
 
-TEST_F(Vec3Test, CrossProductAnticommutative)
+TEST(Vec3Test, NormZeroVector)
 {
-    float4 a = make_float4(1, 2, 3, 0);
-    float4 b = make_float4(4, 5, 6, 0);
-    
-    auto ab = runCrossProduct(a, b);
-    auto ba = runCrossProduct(b, a);
-    
-    // a x b = -(b x a)
-    EXPECT_NEAR(ab.vec.x, -ba.vec.x, 0.001f);
-    EXPECT_NEAR(ab.vec.y, -ba.vec.y, 0.001f);
-    EXPECT_NEAR(ab.vec.z, -ba.vec.z, 0.001f);
-}
+    float4 h_v = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float4 h_result;
+    float4 *d_v, *d_result;
 
-TEST_F(Vec3Test, Normalization)
-{
-    float4 v = make_float4(3, 4, 0, 0);
-    
-    auto result = runNormalization(v);
-    
-    EXPECT_NEAR(result.scalar, 1.0f, 0.001f) << "Normalized vector should have length 1";
-    EXPECT_NEAR(result.vec.x, 0.6f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 0.8f, 0.001f);
-}
+    CUDA_CHECK(cudaMalloc(&d_v, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_v, &h_v, sizeof(float4), cudaMemcpyHostToDevice));
 
-TEST_F(Vec3Test, NormalizationZeroVector)
-{
-    float4 v = make_float4(0, 0, 0, 0);
-    
-    auto result = runNormalization(v);
-    
-    // Zero vector should return zero
-    EXPECT_NEAR(result.vec.x, 0.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 0.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, 0.0f, 0.001f);
-}
+    testVec3NormKernel<<<1, 1>>>(d_v, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
 
-TEST_F(Vec3Test, NormalizationUnitVector)
-{
-    float4 v = make_float4(1, 0, 0, 0);
-    
-    auto result = runNormalization(v);
-    
-    EXPECT_NEAR(result.scalar, 1.0f, 0.001f);
-    EXPECT_NEAR(result.vec.x, 1.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 0.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, 0.0f, 0.001f);
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    // Zero vector should remain zero
+    EXPECT_FLOAT_EQ(h_result.x, 0.0f);
+    EXPECT_FLOAT_EQ(h_result.y, 0.0f);
+    EXPECT_FLOAT_EQ(h_result.z, 0.0f);
+
+    cudaFree(d_v);
+    cudaFree(d_result);
 }
 
 // ============================================================================
-// Vec4 Tests
+// Vec4 tests
 // ============================================================================
 
-class Vec4Test : public ::testing::Test {};
-
-TEST_F(Vec4Test, DotProduct)
+__global__ void testVec4AddKernel(float4* a, float4* b, float4* result)
 {
-    float4 a = make_float4(1, 2, 3, 4);
-    float4 b = make_float4(5, 6, 7, 8);
-    
-    auto result = runVec4DotProduct(a, b);
-    
+    result[0] = vec4::add(a[0], b[0]);
+}
+
+__global__ void testVec4SubKernel(float4* a, float4* b, float4* result)
+{
+    result[0] = vec4::sub(a[0], b[0]);
+}
+
+__global__ void testVec4MultKernel(float4* v, float s, float4* result)
+{
+    result[0] = vec4::mult(v[0], s);
+}
+
+__global__ void testVec4DotKernel(float4* a, float4* b, float* result)
+{
+    result[0] = vec4::dot(a[0], b[0]);
+}
+
+TEST(Vec4Test, Add)
+{
+    float4 h_a = make_float4(1.0f, 2.0f, 3.0f, 4.0f);
+    float4 h_b = make_float4(5.0f, 6.0f, 7.0f, 8.0f);
+    float4 h_result;
+    float4 *d_a, *d_b, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_b, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec4AddKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result.x, 6.0f);
+    EXPECT_FLOAT_EQ(h_result.y, 8.0f);
+    EXPECT_FLOAT_EQ(h_result.z, 10.0f);
+    EXPECT_FLOAT_EQ(h_result.w, 12.0f);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
+}
+
+TEST(Vec4Test, Sub)
+{
+    float4 h_a = make_float4(10.0f, 20.0f, 30.0f, 40.0f);
+    float4 h_b = make_float4(1.0f, 2.0f, 3.0f, 4.0f);
+    float4 h_result;
+    float4 *d_a, *d_b, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_b, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec4SubKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result.x, 9.0f);
+    EXPECT_FLOAT_EQ(h_result.y, 18.0f);
+    EXPECT_FLOAT_EQ(h_result.z, 27.0f);
+    EXPECT_FLOAT_EQ(h_result.w, 36.0f);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
+}
+
+TEST(Vec4Test, Mult)
+{
+    float4 h_v = make_float4(1.0f, 2.0f, 3.0f, 4.0f);
+    float h_s = 3.0f;
+    float4 h_result;
+    float4 *d_v, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_v, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_v, &h_v, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec4MultKernel<<<1, 1>>>(d_v, h_s, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result.x, 3.0f);
+    EXPECT_FLOAT_EQ(h_result.y, 6.0f);
+    EXPECT_FLOAT_EQ(h_result.z, 9.0f);
+    EXPECT_FLOAT_EQ(h_result.w, 12.0f);
+
+    cudaFree(d_v);
+    cudaFree(d_result);
+}
+
+TEST(Vec4Test, Dot)
+{
+    float4 h_a = make_float4(1.0f, 2.0f, 3.0f, 4.0f);
+    float4 h_b = make_float4(5.0f, 6.0f, 7.0f, 8.0f);
+    float h_result;
+    float4 *d_a, *d_b;
+    float *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_b, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testVec4DotKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float), cudaMemcpyDeviceToHost));
+
     // 1*5 + 2*6 + 3*7 + 4*8 = 5 + 12 + 21 + 32 = 70
-    EXPECT_NEAR(result.scalar, 70.0f, 0.001f);
+    EXPECT_FLOAT_EQ(h_result, 70.0f);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
 }
 
 // ============================================================================
-// Quaternion Tests
+// Quaternion tests
 // ============================================================================
 
-class QuaternionTest : public ::testing::Test {};
-
-TEST_F(QuaternionTest, IdentityRotation)
+__global__ void testQuatNormKernel(float4* q, float4* result)
 {
-    float4 v = make_float4(1, 0, 0, 0);
-    float4 q = make_float4(0, 0, 0, 1);  // Identity quaternion
-    
-    auto result = runQuatRotation(v, q);
-    
-    EXPECT_NEAR(result.vec.x, 1.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, 0.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, 0.0f, 0.001f);
+    result[0] = quat::norm(q[0]);
 }
 
-TEST_F(QuaternionTest, Rotation90DegreeZ)
+__global__ void testQuatConjKernel(float4* q, float4* result)
 {
-    float4 v = make_float4(1, 0, 0, 0);
-    float s = sinf(3.14159f / 4.0f);  // 45 deg for quat = 90 deg rotation
-    float c = cosf(3.14159f / 4.0f);
-    float4 q = make_float4(0, 0, s, c);
-    
-    auto result = runQuatRotation(v, q);
-    
-    // (1,0,0) rotated 90 degrees around Z should be (0,1,0)
-    EXPECT_NEAR(result.vec.x, 0.0f, 0.01f);
-    EXPECT_NEAR(result.vec.y, 1.0f, 0.01f);
-    EXPECT_NEAR(result.vec.z, 0.0f, 0.01f);
+    result[0] = quat::conj(q[0]);
 }
 
-TEST_F(QuaternionTest, Rotation90DegreeX)
+__global__ void testQuatCompKernel(float4* a, float4* b, float4* result)
 {
-    float4 v = make_float4(0, 1, 0, 0);
-    float s = sinf(3.14159f / 4.0f);
-    float c = cosf(3.14159f / 4.0f);
-    float4 q = make_float4(s, 0, 0, c);  // 90 deg around X
-    
-    auto result = runQuatRotation(v, q);
-    
-    // (0,1,0) rotated 90 degrees around X should be (0,0,1)
-    EXPECT_NEAR(result.vec.x, 0.0f, 0.01f);
-    EXPECT_NEAR(result.vec.y, 0.0f, 0.01f);
-    EXPECT_NEAR(result.vec.z, 1.0f, 0.01f);
+    result[0] = quat::comp(a[0], b[0]);
 }
 
-TEST_F(QuaternionTest, Rotation180Degree)
+__global__ void testQuatMultKernel(float4* v, float4* q, float4* result, bool inv)
 {
-    float4 v = make_float4(1, 0, 0, 0);
-    // 180 deg around Z: sin(90) = 1, cos(90) = 0
-    float4 q = make_float4(0, 0, 1, 0);
-    
-    auto result = runQuatRotation(v, q);
-    
-    // (1,0,0) rotated 180 degrees around Z should be (-1,0,0)
-    EXPECT_NEAR(result.vec.x, -1.0f, 0.01f);
-    EXPECT_NEAR(result.vec.y, 0.0f, 0.01f);
-    EXPECT_NEAR(result.vec.z, 0.0f, 0.01f);
+    result[0] = quat::mult(v[0], q[0], inv);
 }
 
-TEST_F(QuaternionTest, Conjugate)
+TEST(QuatTest, Norm)
 {
-    float4 q = make_float4(1, 2, 3, 4);
-    
-    auto result = runQuatConj(q);
-    
-    EXPECT_NEAR(result.vec.x, -1.0f, 0.001f);
-    EXPECT_NEAR(result.vec.y, -2.0f, 0.001f);
-    EXPECT_NEAR(result.vec.z, -3.0f, 0.001f);
-    EXPECT_NEAR(result.vec.w, 4.0f, 0.001f);
+    float4 h_q = make_float4(1.0f, 2.0f, 3.0f, 4.0f);
+    float4 h_result;
+    float4 *d_q, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_q, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_q, &h_q, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testQuatNormKernel<<<1, 1>>>(d_q, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    // Verify unit length
+    float len = sqrtf(h_result.x * h_result.x +
+                      h_result.y * h_result.y +
+                      h_result.z * h_result.z +
+                      h_result.w * h_result.w);
+    EXPECT_NEAR(len, 1.0f, EPSILON);
+
+    cudaFree(d_q);
+    cudaFree(d_result);
 }
 
-TEST_F(QuaternionTest, Normalize)
+TEST(QuatTest, NormIdentity)
 {
-    float4 q = make_float4(1, 2, 3, 4);
-    
-    auto result = runQuatNorm(q);
-    
-    EXPECT_NEAR(result.scalar, 1.0f, 0.001f) << "Normalized quaternion should have length 1";
+    // Identity quaternion should remain unchanged
+    float4 h_q = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+    float4 h_result;
+    float4 *d_q, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_q, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_q, &h_q, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testQuatNormKernel<<<1, 1>>>(d_q, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_NEAR(h_result.x, 0.0f, EPSILON);
+    EXPECT_NEAR(h_result.y, 0.0f, EPSILON);
+    EXPECT_NEAR(h_result.z, 0.0f, EPSILON);
+    EXPECT_NEAR(h_result.w, 1.0f, EPSILON);
+
+    cudaFree(d_q);
+    cudaFree(d_result);
 }
 
-TEST_F(QuaternionTest, ComposeWithIdentity)
+TEST(QuatTest, Conj)
 {
-    float4 q = make_float4(0.5f, 0.5f, 0.5f, 0.5f);
-    float4 identity = make_float4(0, 0, 0, 1);
-    
-    auto result = runQuatCompose(q, identity);
-    
-    EXPECT_NEAR(result.vec.x, q.x, 0.001f);
-    EXPECT_NEAR(result.vec.y, q.y, 0.001f);
-    EXPECT_NEAR(result.vec.z, q.z, 0.001f);
-    EXPECT_NEAR(result.vec.w, q.w, 0.001f);
+    float4 h_q = make_float4(1.0f, 2.0f, 3.0f, 4.0f);
+    float4 h_result;
+    float4 *d_q, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_q, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_q, &h_q, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testQuatConjKernel<<<1, 1>>>(d_q, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_FLOAT_EQ(h_result.x, -1.0f);
+    EXPECT_FLOAT_EQ(h_result.y, -2.0f);
+    EXPECT_FLOAT_EQ(h_result.z, -3.0f);
+    EXPECT_FLOAT_EQ(h_result.w, 4.0f);
+
+    cudaFree(d_q);
+    cudaFree(d_result);
 }
 
-TEST_F(QuaternionTest, ComposeIdentityLeft)
+TEST(QuatTest, CompIdentity)
 {
-    float4 q = make_float4(0.5f, 0.5f, 0.5f, 0.5f);
-    float4 identity = make_float4(0, 0, 0, 1);
-    
-    auto result = runQuatCompose(identity, q);
-    
-    EXPECT_NEAR(result.vec.x, q.x, 0.001f);
-    EXPECT_NEAR(result.vec.y, q.y, 0.001f);
-    EXPECT_NEAR(result.vec.z, q.z, 0.001f);
-    EXPECT_NEAR(result.vec.w, q.w, 0.001f);
+    // Composing with identity should return original
+    float4 h_a = make_float4(0.5f, 0.5f, 0.5f, 0.5f);  // Some rotation
+    float4 h_identity = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+    float4 h_result;
+    float4 *d_a, *d_b, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_a, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_b, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_a, &h_a, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_b, &h_identity, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testQuatCompKernel<<<1, 1>>>(d_a, d_b, d_result);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_NEAR(h_result.x, h_a.x, EPSILON);
+    EXPECT_NEAR(h_result.y, h_a.y, EPSILON);
+    EXPECT_NEAR(h_result.z, h_a.z, EPSILON);
+    EXPECT_NEAR(h_result.w, h_a.w, EPSILON);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_result);
 }
 
+TEST(QuatTest, MultIdentity)
+{
+    // Rotating by identity should not change vector
+    float4 h_v = make_float4(1.0f, 2.0f, 3.0f, 0.0f);
+    float4 h_identity = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+    float4 h_result;
+    float4 *d_v, *d_q, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_v, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_q, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_v, &h_v, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_q, &h_identity, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testQuatMultKernel<<<1, 1>>>(d_v, d_q, d_result, false);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    EXPECT_NEAR(h_result.x, h_v.x, EPSILON);
+    EXPECT_NEAR(h_result.y, h_v.y, EPSILON);
+    EXPECT_NEAR(h_result.z, h_v.z, EPSILON);
+
+    cudaFree(d_v);
+    cudaFree(d_q);
+    cudaFree(d_result);
+}
+
+TEST(QuatTest, MultRotation90Z)
+{
+    // 90 degree rotation around Z axis
+    // q = (0, 0, sin(45°), cos(45°)) = (0, 0, √2/2, √2/2)
+    float sqrt2_2 = sqrtf(2.0f) / 2.0f;
+    float4 h_v = make_float4(1.0f, 0.0f, 0.0f, 0.0f);  // X axis
+    float4 h_q = make_float4(0.0f, 0.0f, sqrt2_2, sqrt2_2);
+    float4 h_result;
+    float4 *d_v, *d_q, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_v, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_q, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_v, &h_v, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_q, &h_q, sizeof(float4), cudaMemcpyHostToDevice));
+
+    testQuatMultKernel<<<1, 1>>>(d_v, d_q, d_result, false);
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    // X axis rotated 90° around Z becomes Y axis
+    EXPECT_NEAR(h_result.x, 0.0f, EPSILON);
+    EXPECT_NEAR(h_result.y, 1.0f, EPSILON);
+    EXPECT_NEAR(h_result.z, 0.0f, EPSILON);
+
+    cudaFree(d_v);
+    cudaFree(d_q);
+    cudaFree(d_result);
+}
+
+TEST(QuatTest, MultInverseRoundtrip)
+{
+    // Rotating then inverse rotating should return original
+    float sqrt2_2 = sqrtf(2.0f) / 2.0f;
+    float4 h_v = make_float4(1.0f, 2.0f, 3.0f, 0.0f);
+    float4 h_q = make_float4(0.0f, 0.0f, sqrt2_2, sqrt2_2);
+    float4 h_intermediate, h_result;
+    float4 *d_v, *d_q, *d_result;
+
+    CUDA_CHECK(cudaMalloc(&d_v, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_q, sizeof(float4)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_v, &h_v, sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_q, &h_q, sizeof(float4), cudaMemcpyHostToDevice));
+
+    // Forward rotation
+    testQuatMultKernel<<<1, 1>>>(d_v, d_q, d_result, false);
+    CUDA_CHECK(cudaDeviceSynchronize());
+    CUDA_CHECK(cudaMemcpy(&h_intermediate, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    // Copy intermediate to d_v for inverse rotation
+    CUDA_CHECK(cudaMemcpy(d_v, &h_intermediate, sizeof(float4), cudaMemcpyHostToDevice));
+
+    // Inverse rotation
+    testQuatMultKernel<<<1, 1>>>(d_v, d_q, d_result, true);
+    CUDA_CHECK(cudaDeviceSynchronize());
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
+
+    // Should be back to original
+    EXPECT_NEAR(h_result.x, 1.0f, EPSILON);
+    EXPECT_NEAR(h_result.y, 2.0f, EPSILON);
+    EXPECT_NEAR(h_result.z, 3.0f, EPSILON);
+
+    cudaFree(d_v);
+    cudaFree(d_q);
+    cudaFree(d_result);
+}

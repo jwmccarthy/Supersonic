@@ -1,36 +1,26 @@
 #include <cuda_runtime.h>
 
 #include "CudaCommon.hpp"
+#include "CudaKernels.cuh"
+#include "ArenaMesh.cuh"
 #include "RLEnvironment.hpp"
-#include "CudaKernels.hpp"
 
 RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
-    : sims(sims), numB(numB), numO(numO), seed(seed),
-      m_gameState(sims, numB, numO, seed)
-{    
-    // Allocate device ptr and copy from the member variable
-    CUDA_CHECK(cudaMalloc(&d_state, sizeof(GameState)));
-    
-    // Copy the struct (which contains the valid pointers) to the device
-    CUDA_CHECK(cudaMemcpy(d_state, &m_gameState, sizeof(GameState), 
-                    cudaMemcpyHostToDevice));
+    : sims(sims), numB(numB), numO(numO), seed(seed), 
+      m_arena(MESH_PATH), 
+      m_state(sims, numB, numO, seed)
+{
+    // Copy arena mesh and game state to device
+    cudaMallocCpy(d_arena, &m_arena);
+    cudaMallocCpy(d_state, &m_state);
 
-    // Allocate output buffer on device
+    // Allocate output buffer
     CUDA_CHECK(cudaMalloc(&d_output, sizeof(float)));
 }
 
 float* RLEnvironment::step()
 {
-    int nCar   = numB + numO;
-    int nPairs = nCar * (nCar - 1) / 2;
-    int nTotal = sims * nPairs;
-
-    int blockSize = 256;
-    int gridSize  = (nTotal + blockSize - 1) / blockSize;
-
-    collisionKernel<<<gridSize, blockSize>>>(d_state);
-    cudaDeviceSynchronize();
-
+    // TODO: implement step
     return d_output;
 }
 

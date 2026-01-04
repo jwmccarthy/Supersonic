@@ -7,9 +7,11 @@
 class RLEnvironment
 {
 private:
-    GameState m_gameState;
+    GameState  m_state;
     GameState* d_state;
-    float* d_output;
+    ArenaMesh  m_arena;
+    ArenaMesh* d_arena;
+    float*     d_output;
 
 public:
     int sims;

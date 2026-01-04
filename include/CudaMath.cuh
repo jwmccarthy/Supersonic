@@ -50,22 +50,13 @@ namespace vec3
         if (lenSq <= 1e-6f) return make_float4(0, 0, 0, 0);
         return vec3::mult(v, rsqrtf(lenSq));
     }
-
-    // Normalize with length² output
-    __device__ __forceinline__ float4 norm(float4 v, float& lenSq)
-    {
-        lenSq = vec3::dot(v, v);
-        if (lenSq <= 1e-6f) return make_float4(0, 0, 0, 0);
-        return vec3::mult(v, rsqrtf(lenSq));
-    }
 }
 
 namespace vec4
 {
     __device__ __forceinline__ float4 add(float4 a, float4 b)
     {
-        return 
-        make_float4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+        return make_float4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
     }
 
     __device__ __forceinline__ float4 sub(float4 a, float4 b)
@@ -117,7 +108,7 @@ namespace quat
         // If inverse, use conjugate
         if (inv) q = quat::conj(q);
         
-        // Standard rotation formula: t = 2 * cross(q.xyz, v)
+        // t = 2 * cross(q.xyz, v)
         float4 t = vec3::mult(vec3::cross(q, v), 2.0f);
         
         // v' = v + q.w * t + cross(q.xyz, t)

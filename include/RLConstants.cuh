@@ -22,14 +22,14 @@ __device__ constexpr float SUPERSONIC_SPEED = 2200.0f;
 
 // Body rest heights
 __device__ constexpr float BALL_REST_Z = 93.15f;
-__device__ constexpr float CAR_REST_Z  = 17.01f;
+__device__ constexpr float CAR_REST_Z  = 17.0f;
 
 // Boost pad constants
 __device__ constexpr int NUM_BOOST_PADS = 34;
 
 // Car spawn locations
 __device__ constexpr CarSpawn KICKOFF_LOCATIONS[5] = {
-    {  2048, -2440, PI_4 * 1 },  // Right corner
+    { -2048, -2560, PI_4 * 1 },  // Right corner
     {  2048, -2560, PI_4 * 3 },  // Left corner
     {  -256, -3840, PI_4 * 2 },  // Back right
     {   256, -3840, PI_4 * 2 },  // Back Left
@@ -53,26 +53,24 @@ __device__ constexpr float BALL_MASS = CAR_MASS / 6.0f;
 __device__ constexpr float INV_CAR_MASS  = 1 / CAR_MASS;
 __device__ constexpr float INV_BALL_MASS = 1 / BALL_MASS;
 
-// Car dimensions/face locations in local space
-__device__ constexpr float4 CAR_EXTENTS = {  118, 84.2,  36.2, 0};
-__device__ constexpr float4 CAR_HALF_EX = {   59, 42.1,  18.1, 0};
-__device__ constexpr float4 CAR_OFFSETS = {13.87,    0, 20.75, 0};
+// Car inertia tensor (diagonal, Octane hitbox)
+// Calculated via Bullet's btBoxShape::calculateLocalInertia formula:
+// Ixx = m/12 * (ly² + lz²), Iyy = m/12 * (lx² + lz²), Izz = m/12 * (lx² + ly²)
+__device__ constexpr float CAR_INERTIA_X = 135169.80f;
+__device__ constexpr float CAR_INERTIA_Y = 240247.05f;
+__device__ constexpr float CAR_INERTIA_Z = 330580.95f;
 
-// Car half extents array
-__device__ constexpr float CAR_HALF_EX_ARR[3] = { CAR_HALF_EX.x, CAR_HALF_EX.y, CAR_HALF_EX.z };
+// Inverse inertia for convenience
+__device__ constexpr float INV_CAR_INERTIA_X = 1 / CAR_INERTIA_X;
+__device__ constexpr float INV_CAR_INERTIA_Y = 1 / CAR_INERTIA_Y;
+__device__ constexpr float INV_CAR_INERTIA_Z = 1 / CAR_INERTIA_Z;
+
+// Car dimensions/face locations in local space (Octane hitbox from RocketSim)
+__device__ constexpr float4 CAR_EXTENTS = { 120.507f, 86.6994f,  38.6591f, 0.0f};
+__device__ constexpr float4 CAR_HALF_EX = { 60.2535f, 43.3497f, 19.32955f, 0.0f};
+__device__ constexpr float4 CAR_OFFSETS = { 13.8757f,     0.0f,   20.755f, 0.0f};
 
 // World axis helpers
 __device__ constexpr float4 WORLD_X = {1, 0, 0, 0};
 __device__ constexpr float4 WORLD_Y = {0, 1, 0, 0};
 __device__ constexpr float4 WORLD_Z = {0, 0, 1, 0};
-
-// World axis array
-__device__ constexpr float4 WORLD_AXES[3] = { WORLD_X, WORLD_Y, WORLD_Z };
-
-// Bounding sphere for broad-phase
-__device__ constexpr float CAR_BOUNDING_RADIUS = 74.5f;
-__device__ constexpr float CAR_BOUNDING_RADIUS_SQ = CAR_BOUNDING_RADIUS * CAR_BOUNDING_RADIUS;
-__device__ constexpr float CAR_PAIR_MAX_DIST_SQ = 4.0f * CAR_BOUNDING_RADIUS_SQ;
-
-// SAT face axis bias
-__device__ constexpr float SAT_FUDGE = 1.05f;
