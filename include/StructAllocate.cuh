@@ -2,7 +2,7 @@
 
 #include <cuda_runtime.h>
 
-#include "CudaCommon.hpp"
+#include "CudaCommon.cuh"
 #include "Reflection.hpp"
 
 template <class S>

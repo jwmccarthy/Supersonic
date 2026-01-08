@@ -3,7 +3,7 @@
 #include "CudaKernels.cuh"
 #include "CudaMath.cuh"
 #include "RLConstants.cuh"
-#include "GameState.hpp"
+#include "GameState.cuh"
 #include "StateReset.cuh"
 
 // Reset all simulations to kickoff state

@@ -1,6 +1,6 @@
-#include "GameState.hpp"
+#include "GameState.cuh"
 #include "RLConstants.cuh"
-#include "StructAllocate.hpp"
+#include "StructAllocate.cuh"
 
 GameState::GameState(int sims, int numB, int numO, int seed)
     : sims(sims), nCar(numB + numO), numB(numB), numO(numO), seed(seed)

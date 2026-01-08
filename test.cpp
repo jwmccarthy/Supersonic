@@ -1,7 +1,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "RLEnvironment.hpp"
+#include "RLEnvironment.cuh"
 
 int main()
 {

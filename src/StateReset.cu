@@ -1,16 +1,16 @@
 #include <cuda_runtime.h>
 
 #include "StateReset.cuh"
-#include "GameState.hpp"
+#include "GameState.cuh"
 #include "CudaUtils.cuh"
 #include "RLConstants.cuh"
 
 __device__ void resetBall(Ball* ball, int simIdx)
 {
-    ball->position[simIdx] = make_float4(0, 0, BALL_REST_Z, 0);
-    ball->velocity[simIdx] = make_float4(0, 0, 0, 0);
-    ball->angularV[simIdx] = make_float4(0, 0, 0, 0);
-    ball->rotation[simIdx] = make_float4(0, 0, 0, 1);
+    ball->position[simIdx] = { 0, 0, BALL_REST_Z, 0 };
+    ball->velocity[simIdx] = { 0, 0, 0, 0 };
+    ball->angularV[simIdx] = { 0, 0, 0, 0 };
+    ball->rotation[simIdx] = { 0, 0, 0, 1 };
 }
 
 __device__ void resetCar(Cars* cars, int carIdx, int locIdx, bool invert)
@@ -22,12 +22,12 @@ __device__ void resetCar(Cars* cars, int carIdx, int locIdx, bool invert)
     float y   = invert ? -loc.y   : loc.y;
     float yaw = invert ? -loc.yaw : loc.yaw;
 
-    cars->position[carIdx] = make_float4(x, y, CAR_REST_Z, 0);
-    cars->velocity[carIdx] = make_float4(0, 0, 0, 0);
-    cars->angularV[carIdx] = make_float4(0, 0, 0, 0);
-    
+    cars->position[carIdx] = { x, y, CAR_REST_Z, 0 };
+    cars->velocity[carIdx] = { 0, 0, 0, 0 };
+    cars->angularV[carIdx] = { 0, 0, 0, 0 };
+
     // Quaternion rotation via yaw
-    cars->rotation[carIdx] = make_float4(0, 0, sinf(yaw / 2), cosf(yaw / 2));
+    cars->rotation[carIdx] = { 0, 0, sinf(yaw / 2), cosf(yaw / 2) };
 }
 
 __device__ void resetToKickoff(GameState* state, int simIdx)

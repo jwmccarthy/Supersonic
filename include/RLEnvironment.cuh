@@ -2,7 +2,8 @@
 
 #include <cuda_runtime.h>
 
-#include "GameState.hpp"
+#include "GameState.cuh"
+#include "ArenaMesh.cuh"
 
 class RLEnvironment
 {

@@ -1,14 +1,14 @@
 #include <cuda_runtime.h>
 
-#include "CudaCommon.hpp"
+#include "CudaCommon.cuh"
 #include "CudaKernels.cuh"
 #include "ArenaMesh.cuh"
-#include "RLEnvironment.hpp"
+#include "RLEnvironment.cuh"
 
 RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
-    : sims(sims), numB(numB), numO(numO), seed(seed), 
-      m_arena(MESH_PATH), 
-      m_state(sims, numB, numO, seed)
+    : sims(sims), numB(numB), numO(numO), seed(seed)
+    , m_arena(MESH_PATH)
+    , m_state(sims, numB, numO, seed)
 {
     // Copy arena mesh and game state to device
     cudaMallocCpy(d_arena, &m_arena);
@@ -27,7 +27,7 @@ float* RLEnvironment::step()
 float* RLEnvironment::reset()
 {
     int blockSize = 32;
-	int gridSize = (sims + blockSize - 1) / blockSize;
+    int gridSize = (sims + blockSize - 1) / blockSize;
 
     resetKernel<<<gridSize, blockSize>>>(d_state);
 

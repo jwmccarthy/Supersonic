@@ -15,7 +15,8 @@ find_package(CUDAToolkit REQUIRED)
 
 # Sources/headers (auto-refresh on re-configure)
 file(GLOB_RECURSE PROJECT_HEADERS CONFIGURE_DEPENDS
-     "${CMAKE_SOURCE_DIR}/include/*.hpp")
+     "${CMAKE_SOURCE_DIR}/include/*.hpp"
+     "${CMAKE_SOURCE_DIR}/include/*.cuh")
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
      "${CMAKE_SOURCE_DIR}/src/*.c*")
 
