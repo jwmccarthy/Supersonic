@@ -10,6 +10,15 @@
 #include "CudaMath.cuh"
 #include "ArenaMesh.cuh"
 
+float4 getTriNormal(float4 v1, float4 v2, float4 v3)
+{
+    // Get edge vectors
+    float4 e1 = vec3::sub(v2, v1);
+    float4 e2 = vec3::sub(v3, v1);
+
+    return vec3::norm(vec3::cross(e1, e2));
+}
+
 Mesh ArenaMesh::loadMeshObj(const char* path)
 {
     // File stream
@@ -23,9 +32,9 @@ Mesh ArenaMesh::loadMeshObj(const char* path)
     // Read in vertices and triangles
     while (std::getline(file, line))
     {
-        std::istringstream s(line);
         char type;
-        s >> type;
+        std::istringstream s(line);
+        if (!(s >> type)) continue;
 
         if (type == 'v')
         {
@@ -47,7 +56,10 @@ Mesh ArenaMesh::loadMeshObj(const char* path)
     nVerts = verts.size();
     nTris = tris.size();
 
-    return { verts, tris };
+    // Initialize tri normal array
+    std::vector<float4> norms(nTris);
+
+    return { verts, norms, tris };
 }
 
 Grid ArenaMesh::buildBroadphaseGrid(Mesh m)
@@ -62,10 +74,15 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh m)
     {
         int4 tri = m.tris[i];
 
+        // Get vertices via index
+        float4 v0 = m.verts[tri.x],
+               v1 = m.verts[tri.y],
+               v2 = m.verts[tri.z];
+
         // Get cell index for each
-        int3 cX = getCellIdx(m.verts[tri.x]);
-        int3 cY = getCellIdx(m.verts[tri.y]);
-        int3 cZ = getCellIdx(m.verts[tri.z]);
+        int3 cX = getCellIdx(v0);
+        int3 cY = getCellIdx(v1);
+        int3 cZ = getCellIdx(v2);
 
         // Find min and max index
         int3 lo = vec3::min(vec3::min(cX, cY), cZ);
@@ -78,23 +95,24 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh m)
         {
             cells[flatCellIdx(x, y, z)].push_back(i);
         }
+
+        m.norms[i] = getTriNormal(v0, v1, v2);
     }
 
     // 1D grid storage via prefix sum
     std::vector<int> triPre(nCells + 1, 0);
     for (int i = 0; i < nCells; ++i)
     {
-        std::cout << cells[i].size() << std::endl;
         triPre[i + 1] = triPre[i] + cells[i].size();
     }
 
     // Construct triangle indices
     std::vector<int> triIdx(triPre.back());
-    for (auto& c : cells)
+    for (int i = 0; i < nCells; ++i)
     {
-        triIdx.insert(triIdx.end(), c.begin(), c.end());
+        std::copy(cells[i].begin(), cells[i].end(), triIdx.begin() + triPre[i]);
     }
-    
+
     return { triIdx, triPre };
 }
 
@@ -106,6 +124,7 @@ ArenaMesh::ArenaMesh(const char* path)
 
     // Allocate/copy mesh array pointers
     cudaMallocCpy(verts, m.verts.data(), m.verts.size());
+    cudaMallocCpy(norms, m.norms.data(), m.norms.size());
     cudaMallocCpy(tris, m.tris.data(), m.tris.size());
 
     // Allocate/copy grid array pointers

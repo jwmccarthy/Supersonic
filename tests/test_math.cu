@@ -532,9 +532,14 @@ __global__ void testQuatCompKernel(float4* a, float4* b, float4* result)
     result[0] = quat::comp(a[0], b[0]);
 }
 
-__global__ void testQuatMultKernel(float4* v, float4* q, float4* result, bool inv)
+__global__ void testQuatToWorldKernel(float4* v, float4* q, float4* result)
 {
-    result[0] = quat::mult(v[0], q[0], inv);
+    result[0] = quat::toWorld(v[0], q[0]);
+}
+
+__global__ void testQuatToLocalKernel(float4* v, float4* q, float4* result)
+{
+    result[0] = quat::toLocal(v[0], q[0]);
 }
 
 TEST(QuatTest, Norm)
@@ -655,7 +660,7 @@ TEST(QuatTest, MultIdentity)
     CUDA_CHECK(cudaMemcpy(d_v, &h_v, sizeof(float4), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_q, &h_identity, sizeof(float4), cudaMemcpyHostToDevice));
 
-    testQuatMultKernel<<<1, 1>>>(d_v, d_q, d_result, false);
+    testQuatToWorldKernel<<<1, 1>>>(d_v, d_q, d_result);
     CUDA_CHECK(cudaDeviceSynchronize());
 
     CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
@@ -685,7 +690,7 @@ TEST(QuatTest, MultRotation90Z)
     CUDA_CHECK(cudaMemcpy(d_v, &h_v, sizeof(float4), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_q, &h_q, sizeof(float4), cudaMemcpyHostToDevice));
 
-    testQuatMultKernel<<<1, 1>>>(d_v, d_q, d_result, false);
+    testQuatToWorldKernel<<<1, 1>>>(d_v, d_q, d_result);
     CUDA_CHECK(cudaDeviceSynchronize());
 
     CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
@@ -716,7 +721,7 @@ TEST(QuatTest, MultInverseRoundtrip)
     CUDA_CHECK(cudaMemcpy(d_q, &h_q, sizeof(float4), cudaMemcpyHostToDevice));
 
     // Forward rotation
-    testQuatMultKernel<<<1, 1>>>(d_v, d_q, d_result, false);
+    testQuatToWorldKernel<<<1, 1>>>(d_v, d_q, d_result);
     CUDA_CHECK(cudaDeviceSynchronize());
     CUDA_CHECK(cudaMemcpy(&h_intermediate, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
 
@@ -724,7 +729,7 @@ TEST(QuatTest, MultInverseRoundtrip)
     CUDA_CHECK(cudaMemcpy(d_v, &h_intermediate, sizeof(float4), cudaMemcpyHostToDevice));
 
     // Inverse rotation
-    testQuatMultKernel<<<1, 1>>>(d_v, d_q, d_result, true);
+    testQuatToLocalKernel<<<1, 1>>>(d_v, d_q, d_result);
     CUDA_CHECK(cudaDeviceSynchronize());
     CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(float4), cudaMemcpyDeviceToHost));
 

@@ -2,9 +2,9 @@
 
 #include <cuda_runtime.h>
 
-struct CarSpawn 
+struct CarSpawn
 {
-    float x, y, yaw;
+    float x, y, z, yaw;
 };
 
 __host__ __device__ constexpr float TICK = 1 / 120.0f;
@@ -29,18 +29,31 @@ __host__ __device__ constexpr int NUM_BOOST_PADS = 34;
 
 // Car spawn locations
 __host__ __device__ constexpr CarSpawn KICKOFF_LOCATIONS[5] = {
-    { -2048, -2560, PI_4 * 1 },  // Right corner
-    {  2048, -2560, PI_4 * 3 },  // Left corner
-    {  -256, -3840, PI_4 * 2 },  // Back right
-    {   256, -3840, PI_4 * 2 },  // Back Left
-    {     0, -4608, PI_4 * 2 }   // Back center
+    { -2048, -2560, CAR_REST_Z, PI_4 * 1 },  // Right corner
+    {  2048, -2560, CAR_REST_Z, PI_4 * 3 },  // Left corner
+    {  -256, -3840, CAR_REST_Z, PI_4 * 2 },  // Back right
+    {   256, -3840, CAR_REST_Z, PI_4 * 2 },  // Back Left
+    {     0, -4608, CAR_REST_Z, PI_4 * 2 }   // Back center
 };
 
 __host__ __device__ constexpr CarSpawn RESPAWN_LOCATIONS[4] = {
-    { -2304, -4608, PI_2 * 1 },  // Right inside
-    { -2688, -4608, PI_2 * 1 },  // Right outside
-    {  2304, -4608, PI_2 * 1 },  // Left inside
-    {  2688, -4608, PI_2 * 1 }   // Left outside
+    { -2304, -4608, CAR_REST_Z, PI_2 * 1 },  // Right inside
+    { -2688, -4608, CAR_REST_Z, PI_2 * 1 },  // Right outside
+    {  2304, -4608, CAR_REST_Z, PI_2 * 1 },  // Left inside
+    {  2688, -4608, CAR_REST_Z, PI_2 * 1 }   // Left outside
+};
+
+// Test spawns - placed at known geometry locations from mesh debug output
+// Curved wall section seen at x=5300-5900, y=500-900, z=400-650
+__host__ __device__ constexpr CarSpawn TEST_CAR_LOCATIONS[8] = {
+    { -5800,   800,  450,    PI },  // Mirror on other side
+    { -5800,  -800,  450,    PI },  // Other corner
+    {  5800,   800,  450,     0 },  // Curved wall section (from debug output)
+    {  5800,   800,  500,     0 },  // Slightly higher
+    {  5800,  -800,  450,     0 },  // Another corner
+    {  5500,   850,  400,     0 },  // Deeper into curved section
+    { -5500,   850,  400,    PI },  // Mirror
+    {  5600,     0,  450,     0 },  // Side wall curved section
 };
 
 extern __device__ __constant__ int KICKOFF_PERMUTATIONS[120][4];
@@ -66,19 +79,19 @@ __host__ __device__ constexpr float INV_CAR_INERTIA_Y = 1 / CAR_INERTIA_Y;
 __host__ __device__ constexpr float INV_CAR_INERTIA_Z = 1 / CAR_INERTIA_Z;
 
 // Car dimensions/face locations in local space (Octane hitbox from RocketSim)
-__host__ __device__ constexpr float4 CAR_EXTENTS = { 120.507f, 86.6994f, 38.6591f, 0.0f };
+__host__ __device__ constexpr float4 CAR_EXTENTS = { 120.507f, 86.6994f,  38.6591f, 0.0f };
 __host__ __device__ constexpr float4 CAR_HALF_EX = { 60.2535f, 43.3497f, 19.32955f, 0.0f };
-__host__ __device__ constexpr float4 CAR_OFFSETS = { 13.8757f, 0.0f, 20.755f, 0.0f };
+__host__ __device__ constexpr float4 CAR_OFFSETS = { 13.8757f,     0.0f,   20.755f, 0.0f };
 
 // World axis helpers
 __host__ __device__ constexpr float4 WORLD_X = { 1, 0, 0, 0 };
 __host__ __device__ constexpr float4 WORLD_Y = { 0, 1, 0, 0 };
 __host__ __device__ constexpr float4 WORLD_Z = { 0, 0, 1, 0 };
 
-// Arena extents
-__host__ __device__ constexpr int3   GRID_DIMS = { 24, 36, 8 };
-__host__ __device__ constexpr float4 ARENA_MIN = { -6000.f, -4108.f, -14.f, 0.f };
-__host__ __device__ constexpr float4 ARENA_MAX = { 6000.f, 4108.f, 2076.f, 0.f };
+// Arena grid & extents
+__host__ __device__ constexpr int3   GRID_DIMS = { 54, 42, 16 };
+__host__ __device__ constexpr float4 ARENA_MIN = { -6000.f, -4108.f,  -14.f, 0.f };
+__host__ __device__ constexpr float4 ARENA_MAX = {  6000.f,  4108.f, 2076.f, 0.f };
 __host__ __device__ constexpr float4 CELL_SIZE = {
     (ARENA_MAX.x - ARENA_MIN.x) / (float)GRID_DIMS.x,
     (ARENA_MAX.y - ARENA_MIN.y) / (float)GRID_DIMS.y,

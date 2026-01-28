@@ -20,7 +20,12 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 
 float* RLEnvironment::step()
 {
-    // TODO: implement step
+    int blockSize = 32;
+    int gridSize = (sims * (numB + numO) + blockSize - 1) / blockSize;
+
+    carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena);
+    cudaDeviceSynchronize();
+
     return d_output;
 }
 

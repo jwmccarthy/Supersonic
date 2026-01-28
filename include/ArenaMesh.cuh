@@ -11,13 +11,21 @@
 struct Mesh
 {
     std::vector<float4> verts;
-    std::vector<int4> tris;
+    std::vector<float4> norms;
+    std::vector<int4>   tris;
 };
 
 struct Grid
 {
     std::vector<int> triIdx;
     std::vector<int> triPre;
+};
+
+struct Triangle
+{
+    float4 v0;
+    float4 v1;
+    float4 v2;
 };
 
 struct ArenaMesh
@@ -32,6 +40,7 @@ struct ArenaMesh
 
     // Device mesh arrays
     float4* verts;
+    float4* norms;
     int4* tris;
 
     // Broadphase grid
@@ -65,3 +74,5 @@ struct ArenaMesh
         return x + y * GRID_DIMS.x + z * GRID_DIMS.x * GRID_DIMS.y;
     }
 };
+
+__host__ __device__ float4 getTriNormal(float4 v0, float4 v1, float4 v2);

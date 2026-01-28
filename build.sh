@@ -8,6 +8,6 @@ while getopts "tc" opt; do
     esac
 done
 
-cd build/
+cd "$(dirname "$0")/build"
 cmake .. -DBUILD_TESTS=$BUILD_TESTS
-cmake --build .
+cmake --build . -j$(nproc)

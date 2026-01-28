@@ -257,12 +257,9 @@ namespace quat
         };
     }
 
-    // Transform a vector via a quaternion (inv=true: world -> local)
-    __host__ __device__ __forceinline__ float4 mult(float4 v, float4 q, bool inv = false)
+    // Rotate vector from local to world space
+    __host__ __device__ __forceinline__ float4 toWorld(float4 v, float4 q)
     {
-        // If inverse, use conjugate
-        q = inv ? conj(q) : q;
-
         // t = 2 * cross(q.xyz, v)
         float4 t = vec3::mult(vec3::cross(q, v), 2.0f);
 
@@ -275,5 +272,11 @@ namespace quat
             v.z + q.w * t.z + u.z,
             v.w
         };
+    }
+
+    // Rotate vector from world to local space
+    __host__ __device__ __forceinline__ float4 toLocal(float4 v, float4 q)
+    {
+        return toWorld(v, conj(q));
     }
 }

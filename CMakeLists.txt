@@ -1,26 +1,21 @@
 cmake_minimum_required(VERSION 3.20)
 project(supersonic LANGUAGES CXX CUDA)
 
-# Options
-option(BUILD_TESTS "Build the test suite" OFF)
+# Use ccache if available
+find_program(CCACHE ccache)
+if(CCACHE)
+  set(CMAKE_CUDA_COMPILER_LAUNCHER ${CCACHE})
+  set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
+endif()
 
-# clangd / tooling
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# CUDA setup
+find_package(CUDAToolkit REQUIRED)
+set(CMAKE_CUDA_ARCHITECTURES native)
 
-# Plugin that provides ReflectionPlugin
+# Reflection plugin
 add_subdirectory(plugin)
 
-# CUDA bits
-find_package(CUDAToolkit REQUIRED)
-
-# Sources/headers (auto-refresh on re-configure)
-file(GLOB_RECURSE PROJECT_HEADERS CONFIGURE_DEPENDS
-     "${CMAKE_SOURCE_DIR}/include/*.hpp"
-     "${CMAKE_SOURCE_DIR}/include/*.cuh")
-file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
-     "${CMAKE_SOURCE_DIR}/src/*.c*")
-
-# Generated reflection header
+# Generate reflection header (only needs GameState.cuh)
 set(REFLECTION_HEADER "${CMAKE_BINARY_DIR}/reflection.gen.hpp")
 add_custom_command(
   OUTPUT "${REFLECTION_HEADER}"
@@ -30,41 +25,32 @@ add_custom_command(
           -fsyntax-only -x c++
           -I"${CMAKE_SOURCE_DIR}/include"
           -I"${CUDAToolkit_INCLUDE_DIRS}"
-          ${PROJECT_HEADERS}
-  DEPENDS ReflectionPlugin ${PROJECT_HEADERS}
-  COMMENT "Generating reflection data"
+          "${CMAKE_SOURCE_DIR}/include/GameState.cuh"
+  DEPENDS ReflectionPlugin "${CMAKE_SOURCE_DIR}/include/GameState.cuh"
+  COMMENT "Generating reflection"
 )
 add_custom_target(reflection DEPENDS "${REFLECTION_HEADER}")
 
+# Sources
+file(GLOB CUDA_SOURCES "${CMAKE_SOURCE_DIR}/src/*.cu")
+
 # Main executable
-add_executable(supersonic
-  test.cpp
-  ${PROJECT_SOURCES}
-)
+add_executable(supersonic test.cpp ${CUDA_SOURCES})
 add_dependencies(supersonic reflection)
 
 target_include_directories(supersonic PRIVATE
   "${CMAKE_SOURCE_DIR}/include"
   "${CMAKE_BINARY_DIR}"
-  "${CUDAToolkit_INCLUDE_DIRS}"
 )
 
 set_target_properties(supersonic PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON
 )
 
-# Force include reflection header and disable warnings
 target_compile_options(supersonic PRIVATE
-  $<$<COMPILE_LANGUAGE:CXX>:-include ${REFLECTION_HEADER}>
-  $<$<COMPILE_LANGUAGE:CXX>:-Wno-attributes>
-  $<$<COMPILE_LANGUAGE:CUDA>:-Wno-deprecated-gpu-targets>
+  $<$<COMPILE_LANGUAGE:CXX>:-include${REFLECTION_HEADER} -Wno-attributes>
+  $<$<COMPILE_LANGUAGE:CUDA>:--pre-include=${REFLECTION_HEADER}>
   $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wno-attributes>
 )
 
 target_link_libraries(supersonic PRIVATE CUDA::cudart)
-
-# Tests (optional)
-if(BUILD_TESTS)
-  enable_testing()
-  add_subdirectory(tests)
-endif()
