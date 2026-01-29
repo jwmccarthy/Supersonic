@@ -14,6 +14,9 @@ private:
     ArenaMesh* d_arena;
     float*     d_output;
 
+    // Debug accumulator
+    int* d_debug;
+
 public:
     int sims;
     int numB;

@@ -89,7 +89,7 @@ __host__ __device__ constexpr float4 WORLD_Y = { 0, 1, 0, 0 };
 __host__ __device__ constexpr float4 WORLD_Z = { 0, 0, 1, 0 };
 
 // Arena grid & extents
-__host__ __device__ constexpr int3   GRID_DIMS = { 54, 42, 16 };
+__host__ __device__ constexpr int3   GRID_DIMS = { 48, 48, 16 };
 __host__ __device__ constexpr float4 ARENA_MIN = { -6000.f, -4108.f,  -14.f, 0.f };
 __host__ __device__ constexpr float4 ARENA_MAX = {  6000.f,  4108.f, 2076.f, 0.f };
 __host__ __device__ constexpr float4 CELL_SIZE = {

@@ -59,10 +59,14 @@ Mesh ArenaMesh::loadMeshObj(const char* path)
     // Initialize tri normal array
     std::vector<float4> norms(nTris);
 
-    return { verts, norms, tris };
+    // Initialize pre-computed AABB
+    std::vector<float4> aabbMin(nTris);
+    std::vector<float4> aabbMax(nTris);
+
+    return { verts, norms, tris, aabbMin, aabbMax };
 }
 
-Grid ArenaMesh::buildBroadphaseGrid(Mesh m)
+Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
 {
     // Number of cells in grid
     nCells = (int)vec3::prod(GRID_DIMS);
@@ -96,7 +100,12 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh m)
             cells[flatCellIdx(x, y, z)].push_back(i);
         }
 
+        // Pre-compute triangle normals
         m.norms[i] = getTriNormal(v0, v1, v2);
+
+        // Pre-compute triangle AABBs
+        m.aabbMin[i] = vec3::min(vec3::min(v0, v1), v2);
+        m.aabbMax[i] = vec3::max(vec3::max(v0, v1), v2);
     }
 
     // 1D grid storage via prefix sum
@@ -125,7 +134,11 @@ ArenaMesh::ArenaMesh(const char* path)
     // Allocate/copy mesh array pointers
     cudaMallocCpy(verts, m.verts.data(), m.verts.size());
     cudaMallocCpy(norms, m.norms.data(), m.norms.size());
-    cudaMallocCpy(tris, m.tris.data(), m.tris.size());
+    cudaMallocCpy(tris,   m.tris.data(), m.tris.size());
+
+    // Allocate/copy triangle AABB pointers
+    cudaMallocCpy(aabbMin, m.aabbMin.data(), m.aabbMin.size());
+    cudaMallocCpy(aabbMax, m.aabbMax.data(), m.aabbMax.size());
 
     // Allocate/copy grid array pointers
     cudaMallocCpy(triIdx, g.triIdx.data(), g.triIdx.size());

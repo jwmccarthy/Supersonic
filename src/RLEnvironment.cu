@@ -3,6 +3,7 @@
 #include "CudaCommon.cuh"
 #include "CudaKernels.cuh"
 #include "ArenaMesh.cuh"
+#include "CarArenaCollision.cuh"
 #include "RLEnvironment.cuh"
 
 RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
@@ -16,14 +17,18 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 
     // Allocate output buffer
     CUDA_CHECK(cudaMalloc(&d_output, sizeof(float)));
+
+    // Debug accumulator
+    CUDA_CHECK(cudaMalloc(&d_debug, sizeof(int)));
 }
 
 float* RLEnvironment::step()
 {
     int blockSize = 32;
-    int gridSize = (sims * (numB + numO) + blockSize - 1) / blockSize;
+    int gridSize = (sims * (numB + numO) * THREADS_PER_CAR + blockSize - 1) / blockSize;
 
-    carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena);
+    CUDA_CHECK(cudaMemset(d_debug, 0, sizeof(int)));
+    carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_debug);
     cudaDeviceSynchronize();
 
     return d_output;

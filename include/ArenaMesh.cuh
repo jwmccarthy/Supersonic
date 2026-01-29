@@ -8,24 +8,29 @@
 
 #define MESH_PATH "./assets/pitch.obj"
 
+struct Triangle
+{
+    float4 v0;
+    float4 v1;
+    float4 v2;
+};
+
 struct Mesh
 {
+    // Mesh
     std::vector<float4> verts;
     std::vector<float4> norms;
     std::vector<int4>   tris;
+
+    // Bounding boxes
+    std::vector<float4> aabbMin;
+    std::vector<float4> aabbMax;
 };
 
 struct Grid
 {
     std::vector<int> triIdx;
     std::vector<int> triPre;
-};
-
-struct Triangle
-{
-    float4 v0;
-    float4 v1;
-    float4 v2;
 };
 
 struct ArenaMesh
@@ -43,6 +48,10 @@ struct ArenaMesh
     float4* norms;
     int4* tris;
 
+    // Tri bounding boxes
+    float4* aabbMin;
+    float4* aabbMax;
+
     // Broadphase grid
     int* triIdx;
     int* triPre;
@@ -51,7 +60,7 @@ struct ArenaMesh
 
     // Mesh & grid construction
     Mesh loadMeshObj(const char* path);
-    Grid buildBroadphaseGrid(Mesh m);
+    Grid buildBroadphaseGrid(Mesh& m);
 
     // Indexing helpers
     __host__ __device__ __forceinline__ int3 getCellIdx(float4 p)

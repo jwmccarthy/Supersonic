@@ -163,6 +163,26 @@ namespace vec3
     {
         return { fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z), 0 };
     }
+
+    __host__ __device__ __forceinline__ bool gt(float4 a, float4 b)
+    {
+        return a.x > b.x && a.y > b.y && a.z > b.z;
+    }
+
+    __host__ __device__ __forceinline__ bool gte(float4 a, float4 b)
+    {
+        return a.x >= b.x && a.y >= b.y && a.z >= b.z;
+    }
+
+    __host__ __device__ __forceinline__ bool lt(float4 a, float4 b)
+    {
+        return a.x < b.x && a.y < b.y && a.z < b.z;
+    }
+
+    __host__ __device__ __forceinline__ bool lte(float4 a, float4 b)
+    {
+        return a.x <= b.x && a.y <= b.y && a.z <= b.z;
+    }
 }
 
 namespace vec4
