@@ -24,7 +24,7 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 
 float* RLEnvironment::step()
 {
-    int blockSize = 32;
+    int blockSize = 128;
     int gridSize = (sims * (numB + numO) * THREADS_PER_CAR + blockSize - 1) / blockSize;
 
     CUDA_CHECK(cudaMemset(d_debug, 0, sizeof(int)));
