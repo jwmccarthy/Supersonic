@@ -9,9 +9,10 @@ int main()
     using clock  = std::chrono::steady_clock;
     using second = std::chrono::duration<double>;
 
-    const long sims = 1024;
-    const int nCar  = 4;
-    const int seed  = 123;
+    const int sims = 1024;
+    const int nCar = 4;
+    const int seed = 123;
+    const int iter = 10000;
 
     RLEnvironment env{sims, nCar, nCar, seed};
 
@@ -22,18 +23,14 @@ int main()
 
     env.reset();
 
-    // Warmup
     for (int i = 0; i < 100; i++)
         env.step();
     cudaDeviceSynchronize();
 
-    // Timed run
-    const int iterations = 100000;
-
     auto t0 = clock::now();
     cudaEventRecord(start);
 
-    for (int i = 0; i < iterations; i++)
+    for (int i = 0; i < iter; i++)
     {
         env.step();
     }
@@ -42,19 +39,18 @@ int main()
     cudaEventSynchronize(stop);
     auto t1 = clock::now();
 
-    // Results
     float gpuMs = 0;
     cudaEventElapsedTime(&gpuMs, start, stop);
 
     second wallTime = t1 - t0;
-    float avgUs = (gpuMs * 1000.0f) / iterations;
+    float avgUs = (gpuMs * 1000.0f) / iter;
 
-    std::cout << "Iterations:    " << iterations << "\n";
+    std::cout << "Iterations:    " << iter << "\n";
     std::cout << "Wall time:     " << wallTime.count() << " s\n";
     std::cout << "GPU time:      " << gpuMs << " ms\n";
     std::cout << "Avg per step:  " << avgUs << " us\n";
-    std::cout << "Steps/sec:     " << (iterations / wallTime.count()) << "\n";
-    std::cout << "Sim-steps/sec: " << (iterations * sims / wallTime.count() / 1e6) << " M\n";
+    std::cout << "Steps/sec:     " << (iter / wallTime.count()) << "\n";
+    std::cout << "Sim-steps/sec: " << (iter * sims / wallTime.count() / 1e6) << " M\n";
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
