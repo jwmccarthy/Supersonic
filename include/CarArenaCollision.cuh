@@ -5,13 +5,21 @@
 #include "RLConstants.cuh"
 #include "GameState.cuh"
 #include "ArenaMesh.cuh"
-
-constexpr int THREADS_PER_CAR = 2;
+#include "Reflection.hpp"
 
 struct AABB
 {
     float4 min;
     float4 max;
+};
+
+struct CollisionCandidates
+{
+    int*  carIdx;
+    int*  simIdx;
+    int*  triIdx;
+    int2* segOff;
+    int   nCands;
 };
 
 __device__ __forceinline__ Triangle getTriVerts(ArenaMesh* arena, int t)
@@ -47,7 +55,7 @@ __device__ __forceinline__ AABB getCarAABB(ArenaMesh* arena, float4 pos, float4 
     return { aabbMin, aabbMax };
 }
 
-__device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* arena, int carIdx, int laneIdx, int* debug)
+__device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* arena, int carIdx, int* debug)
 {
     // Cached access of car state
     float4 pos = __ldg(&state->cars.position[carIdx]);
@@ -72,7 +80,7 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
         int triBeg = __ldg(&arena->triPre[cellIdx]);
         int triEnd = __ldg(&arena->triPre[cellIdx + 1]);
 
-        for (int t = laneIdx; t < triEnd - triBeg; t += THREADS_PER_CAR)
+        for (int t = 0; t < triEnd - triBeg; ++t)
         {
             int triIdx = __ldg(&arena->triIdx[triBeg + t]);
 
@@ -85,10 +93,5 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
         }
     }
 
-    // Reduce across lanes
-    #pragma unroll
-    for (int offset = THREADS_PER_CAR >> 1; offset > 0; offset /= 2)
-        overlaps += __shfl_down_sync(0xFFFFFFFF, overlaps, offset);
-
-    if (laneIdx == 0) atomicAdd(debug, overlaps);
+    atomicAdd(debug, overlaps);
 }
