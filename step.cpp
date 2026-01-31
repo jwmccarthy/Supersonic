@@ -9,7 +9,11 @@ int main()
     using clock  = std::chrono::steady_clock;
     using second = std::chrono::duration<double>;
 
-    RLEnvironment env{1024, 2, 2, 123};
+    const long sims = 1024;
+    const int nCar  = 4;
+    const int seed  = 123;
+
+    RLEnvironment env{sims, nCar, nCar, seed};
 
     // CUDA events for kernel timing
     cudaEvent_t start, stop;
@@ -50,7 +54,7 @@ int main()
     std::cout << "GPU time:      " << gpuMs << " ms\n";
     std::cout << "Avg per step:  " << avgUs << " us\n";
     std::cout << "Steps/sec:     " << (iterations / wallTime.count()) << "\n";
-    std::cout << "Sim-steps/sec: " << (iterations * 1024 / wallTime.count() / 1e6) << " M\n";
+    std::cout << "Sim-steps/sec: " << (iterations * sims / wallTime.count() / 1e6) << " M\n";
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
