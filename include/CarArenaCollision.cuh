@@ -6,7 +6,7 @@
 #include "GameState.cuh"
 #include "ArenaMesh.cuh"
 
-constexpr int THREADS_PER_CAR = 16;
+constexpr int THREADS_PER_CAR = 2;
 
 struct AABB
 {
