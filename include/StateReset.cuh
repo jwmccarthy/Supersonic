@@ -71,27 +71,38 @@ __device__ __forceinline__ void randomizeInitialPositions(GameState* state, int 
     const int numO = state->numO;
     const int nCar = state->nCar;
 
-    // Pseudorandom kickoff permutation
-    const int  permIdx = hash(simIdx ^ sims) % 120;
-    const int* carLocs = KICKOFF_PERMUTATIONS[permIdx];
+    // Base seed
+    int seed = hash(simIdx ^ (sims * 31));
 
-    // Ball back to center field
-    resetBall(&state->ball, simIdx);
+    // Randomize ball position
+    Ball* ball = &state->ball;
+    ball->position[simIdx] = {
+        hashToRange(seed++, ARENA_MIN.x, ARENA_MAX.x),
+        hashToRange(seed++, ARENA_MIN.y, ARENA_MAX.y),
+        hashToRange(seed++, ARENA_MIN.z, ARENA_MAX.z), 0
+    };
+    ball->velocity[simIdx] = { 0, 0, 0, 0 };
+    ball->angularV[simIdx] = { 0, 0, 0, 0 };
+    ball->rotation[simIdx] = { 0, 0, 0, 1 };
 
     #pragma unroll 2
     for (int team = 0; team < 2; team++)
     {
-        // Invert orange positions
-        const bool invert = team;
         const int numCars = team ? numO : numB;
         
         for (int i = 0; i < numCars; i++)
         {
-            const int locIdx = carLocs[i];
             const int carIdx = simIdx * nCar + (team * numB + i);
 
-            // Place cars at kickoff positions
-            resetCar(&state->cars, carIdx, locIdx, invert);
+            float x   = hashToRange(seed++, ARENA_MIN.x, ARENA_MAX.x);
+            float y   = hashToRange(seed++, ARENA_MIN.y, ARENA_MAX.y);
+            float z   = hashToRange(seed++, ARENA_MIN.z, ARENA_MAX.z);
+            float yaw = hashToRange(seed++, -PI, PI);
+
+            state->cars.position[carIdx] = { x, y, z, 0 };
+            state->cars.velocity[carIdx] = { 0, 0, 0, 0 };
+            state->cars.angularV[carIdx] = { 0, 0, 0, 0 };
+            state->cars.rotation[carIdx] = { 0, 0, sinf(yaw / 2), cosf(yaw / 2) };
         }
     }
 }

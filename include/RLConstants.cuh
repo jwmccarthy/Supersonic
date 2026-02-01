@@ -43,19 +43,6 @@ __host__ __device__ constexpr CarSpawn RESPAWN_LOCATIONS[4] = {
     {  2688, -4608, CAR_REST_Z, PI_2 * 1 }   // Left outside
 };
 
-// Test spawns - placed at known geometry locations from mesh debug output
-// Curved wall section seen at x=5300-5900, y=500-900, z=400-650
-__host__ __device__ constexpr CarSpawn TEST_CAR_LOCATIONS[8] = {
-    { -5800,   800,  450,    PI },  // Mirror on other side
-    { -5800,  -800,  450,    PI },  // Other corner
-    {  5800,   800,  450,     0 },  // Curved wall section (from debug output)
-    {  5800,   800,  500,     0 },  // Slightly higher
-    {  5800,  -800,  450,     0 },  // Another corner
-    {  5500,   850,  400,     0 },  // Deeper into curved section
-    { -5500,   850,  400,    PI },  // Mirror
-    {  5600,     0,  450,     0 },  // Side wall curved section
-};
-
 extern __device__ __constant__ int KICKOFF_PERMUTATIONS[120][4];
 
 // Dynamic rigid body masses

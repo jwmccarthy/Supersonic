@@ -94,4 +94,6 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
     }
 
     atomicAdd(debug, overlaps);
+
+    // printf("Overlaps: %d\n", overlaps);
 }

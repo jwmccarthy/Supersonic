@@ -8,14 +8,12 @@
 #include "StateReset.cuh"
 #include "CarArenaCollision.cuh"
 
-// Reset all simulations to kickoff state
 __global__ void resetKernel(GameState* state)
 {
-    // One sim per thread
     int simIdx = blockIdx.x * blockDim.x + threadIdx.x;
     if (simIdx >= state->sims) return;
 
-    resetToKickoff(state, simIdx);
+    randomizeInitialPositions(state, simIdx);
 }
 
 __global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, int* debug)
