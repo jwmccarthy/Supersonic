@@ -13,15 +13,6 @@ struct AABB
     float4 max;
 };
 
-struct CollisionCandidates
-{
-    int*  carIdx;
-    int*  simIdx;
-    int*  triIdx;
-    int2* segOff;
-    int   nCands;
-};
-
 __device__ __forceinline__ Triangle getTriVerts(ArenaMesh* arena, int t)
 {
     int4 tri = __ldg(&arena->tris[t]);
@@ -93,7 +84,6 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
         }
     }
 
-    atomicAdd(debug, overlaps);
-
-    // printf("Overlaps: %d\n", overlaps);
+    // Keep nu
+    state->cars.numTris[carIdx] = overlaps;
 }

@@ -18,6 +18,7 @@ struct REFLECT Ball : RigidBody
 
 struct REFLECT Cars : RigidBody
 {
+    int* numTris;
     float* boost;
 };
 
