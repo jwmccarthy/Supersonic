@@ -16,8 +16,13 @@ private:
 
     Workspace  m_space;
     Workspace* d_space;
-    
+
     float*     d_output;
+
+    // CUDA graph for step()
+    cudaGraph_t     m_stepGraph;
+    cudaGraphExec_t m_stepGraphExec;
+    cudaStream_t    m_stream;
 
 public:
     int sims;
@@ -27,6 +32,7 @@ public:
     int seed;
 
     RLEnvironment(int sims, int numB, int numO, int seed);
+    ~RLEnvironment();
 
     // Gymnasium API
     float* step();
