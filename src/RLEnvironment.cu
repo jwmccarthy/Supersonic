@@ -28,7 +28,8 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 float* RLEnvironment::step()
 {
     int blockSize = 128;
-    int gridSize = (cars + blockSize - 1) / blockSize;
+    int maxPairs = cars * MAX_PER_CAR;
+    int gridSize = (maxPairs + blockSize - 1) / blockSize;
 
     void* args[] = { &d_state, &d_arena, &d_space };
     cudaLaunchCooperativeKernel((void*)carArenaCollisionKernel, gridSize, blockSize, args);
