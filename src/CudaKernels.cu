@@ -1,5 +1,4 @@
 #include <cuda_runtime.h>
-#include <cooperative_groups.h>
 
 #include "CudaKernels.cuh"
 #include "CudaMath.cuh"
@@ -9,8 +8,6 @@
 #include "StateReset.cuh"
 #include "CarArenaCollision.cuh"
 
-namespace cg = cooperative_groups;
-
 __global__ void resetKernel(GameState* state)
 {
     int simIdx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -19,28 +16,18 @@ __global__ void resetKernel(GameState* state)
     randomizeInitialPositions(state, simIdx);
 }
 
-__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, Workspace* space)
+__global__ void carArenaBroadPhaseKernel(GameState* state, ArenaMesh* arena, Workspace* space)
 {
-    cg::grid_group grid = cg::this_grid();
+    int carIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (carIdx >= state->sims * state->nCar) return;
 
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    carArenaBroadPhase(state, arena, space, carIdx);
+}
 
-    // Reset count
-    if (idx == 0) space->count = 0;
+__global__ void carArenaNarrowPhaseKernel(GameState* state, ArenaMesh* arena, Workspace* space)
+{
+    int pairIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (pairIdx >= space->count) return;
 
-    grid.sync();
-
-    // Broad phase - identify candidate car-tri pairs
-    if (idx < state->sims * state->nCar)
-    {
-        carArenaBroadPhase(state, arena, space, idx);
-    }
-
-    grid.sync();
-
-    // Narrow phase - SAT on car-tri candidates
-    if (idx < space->count)
-    {
-        carArenaNarrowPhase(state, arena, space, idx);
-    }
+    carArenaNarrowPhase(state, arena, space, pairIdx);
 }

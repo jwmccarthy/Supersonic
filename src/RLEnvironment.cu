@@ -28,11 +28,18 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 float* RLEnvironment::step()
 {
     int blockSize = 128;
-    int maxPairs = cars * MAX_PER_CAR;
-    int gridSize = (maxPairs + blockSize - 1) / blockSize;
 
-    void* args[] = { &d_state, &d_arena, &d_space };
-    cudaLaunchCooperativeKernel((void*)carArenaCollisionKernel, gridSize, blockSize, args);
+    // Reset count
+    cudaMemset(&d_space->count, 0, sizeof(int));
+
+    // Broad phase - one thread per car
+    int broadGrid = (cars + blockSize - 1) / blockSize;
+    carArenaBroadPhaseKernel<<<broadGrid, blockSize>>>(d_state, d_arena, d_space);
+
+    // Narrow phase - one thread per max possible pair
+    int narrowGrid = (cars * MAX_PER_CAR + blockSize - 1) / blockSize;
+    carArenaNarrowPhaseKernel<<<narrowGrid, blockSize>>>(d_state, d_arena, d_space);
+
     cudaDeviceSynchronize();
 
     return d_output;
