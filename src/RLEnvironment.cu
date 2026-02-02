@@ -28,8 +28,13 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 float* RLEnvironment::step()
 {
     int blockSize = 128;
-    int maxPairs = cars * MAX_PER_CAR;
-    int gridSize = (maxPairs + blockSize - 1) / blockSize;
+
+    // Query max cooperative grid size
+    int numSMs;
+    int blocksPerSM;
+    cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, 0);
+    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&blocksPerSM, carArenaCollisionKernel, blockSize, 0);
+    int gridSize = numSMs * blocksPerSM;
 
     void* args[] = { &d_state, &d_arena, &d_space };
     CUDA_CHECK(cudaLaunchCooperativeKernel((void*)carArenaCollisionKernel, gridSize, blockSize, args));
