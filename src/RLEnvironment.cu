@@ -23,36 +23,17 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 
     // Allocate output buffer
     CUDA_CHECK(cudaMalloc(&d_output, sims * sizeof(float)));
-
-    // Create stream
-    CUDA_CHECK(cudaStreamCreate(&m_stream));
-
-    // Capture step() operations into a graph
-    int blockSize = 128;
-    int broadGrid = (cars + blockSize - 1) / blockSize;
-    int narrowGrid = (cars * MAX_PER_CAR + blockSize - 1) / blockSize;
-
-    CUDA_CHECK(cudaStreamBeginCapture(m_stream, cudaStreamCaptureModeGlobal));
-
-    cudaMemsetAsync(&d_space->count, 0, sizeof(int), m_stream);
-    carArenaBroadPhaseKernel<<<broadGrid, blockSize, 0, m_stream>>>(d_state, d_arena, d_space);
-    carArenaNarrowPhaseKernel<<<narrowGrid, blockSize, 0, m_stream>>>(d_state, d_arena, d_space);
-
-    CUDA_CHECK(cudaStreamEndCapture(m_stream, &m_stepGraph));
-    CUDA_CHECK(cudaGraphInstantiate(&m_stepGraphExec, m_stepGraph, nullptr, nullptr, 0));
-}
-
-RLEnvironment::~RLEnvironment()
-{
-    cudaGraphExecDestroy(m_stepGraphExec);
-    cudaGraphDestroy(m_stepGraph);
-    cudaStreamDestroy(m_stream);
 }
 
 float* RLEnvironment::step()
 {
-    CUDA_CHECK(cudaGraphLaunch(m_stepGraphExec, m_stream));
-    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    int blockSize = 128;
+    int maxPairs = cars * MAX_PER_CAR;
+    int gridSize = (maxPairs + blockSize - 1) / blockSize;
+
+    void* args[] = { &d_state, &d_arena, &d_space };
+    CUDA_CHECK(cudaLaunchCooperativeKernel((void*)carArenaCollisionKernel, gridSize, blockSize, args));
+    cudaDeviceSynchronize();
 
     return d_output;
 }

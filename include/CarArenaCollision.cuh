@@ -5,7 +5,8 @@
 #include "RLConstants.cuh"
 #include "GameState.cuh"
 #include "ArenaMesh.cuh"
-constexpr int MAX_PER_CAR = 64;
+
+constexpr int MAX_PER_CAR = 8;
 
 struct AABB
 {
