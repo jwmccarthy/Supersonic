@@ -27,6 +27,12 @@ struct REFLECT Pads
     bool* isActive;
 };
 
+struct REFLECT Workspace
+{
+    int*  count;
+    int2* pairs;
+};
+
 struct GameState
 {
     int sims;  // # of simulations

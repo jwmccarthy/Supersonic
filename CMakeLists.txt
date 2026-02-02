@@ -8,8 +8,11 @@ set(CMAKE_CUDA_ARCHITECTURES native)
 # Reflection plugin
 add_subdirectory(plugin)
 
-# Generate reflection header (only needs GameState.cuh)
+# Generate reflection header
 set(REFLECTION_HEADER "${CMAKE_BINARY_DIR}/reflection.gen.hpp")
+set(REFLECT_HEADERS
+  "${CMAKE_SOURCE_DIR}/include/GameState.cuh"
+)
 add_custom_command(
   OUTPUT "${REFLECTION_HEADER}"
   COMMAND clang++ -std=c++17
@@ -18,8 +21,8 @@ add_custom_command(
           -fsyntax-only -x c++
           -I"${CMAKE_SOURCE_DIR}/include"
           -I"${CUDAToolkit_INCLUDE_DIRS}"
-          "${CMAKE_SOURCE_DIR}/include/GameState.cuh"
-  DEPENDS ReflectionPlugin "${CMAKE_SOURCE_DIR}/include/GameState.cuh"
+          ${REFLECT_HEADERS}
+  DEPENDS ReflectionPlugin ${REFLECT_HEADERS}
   COMMENT "Generating reflection"
 )
 add_custom_target(reflection DEPENDS "${REFLECTION_HEADER}")

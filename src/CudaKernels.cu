@@ -16,11 +16,11 @@ __global__ void resetKernel(GameState* state)
     randomizeInitialPositions(state, simIdx);
 }
 
-__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, int* debug)
+__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, Workspace* space)
 {
     // 16 threads per car (2 cars per warp)
     int carIdx = (blockIdx.x * blockDim.x + threadIdx.x);
     if (carIdx >= state->sims * state->nCar) return;
 
-    carArenaBroadPhase(state, arena, carIdx, debug);
+    carArenaBroadPhase(state, arena, space, carIdx);
 }

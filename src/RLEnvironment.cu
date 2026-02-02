@@ -2,12 +2,14 @@
 
 #include "CudaCommon.cuh"
 #include "CudaKernels.cuh"
+#include "StructAllocate.cuh"
 #include "ArenaMesh.cuh"
 #include "CarArenaCollision.cuh"
 #include "RLEnvironment.cuh"
 
 RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     : sims(sims), numB(numB), numO(numO), seed(seed)
+    , cars(sims * (numB + numO))
     , m_arena(MESH_PATH)
     , m_state(sims, numB, numO, seed)
 {
@@ -15,20 +17,23 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     cudaMallocCpy(d_arena, &m_arena);
     cudaMallocCpy(d_state, &m_state);
 
-    // Allocate output buffer
-    CUDA_CHECK(cudaMalloc(&d_output, sizeof(float)));
+    // Allocate intermediate workspaces
+    cudaMallocSOA(m_space, { 1, cars * MAX_PER_CAR });
+    cudaMallocCpy(d_space, &m_space);
 
-    // Debug accumulator
-    CUDA_CHECK(cudaMalloc(&d_debug, sizeof(int)));
+    // Allocate output buffer
+    CUDA_CHECK(cudaMalloc(&d_output, sims * sizeof(float)));
 }
 
 float* RLEnvironment::step()
 {
     int blockSize = 128;
-    int gridSize = (sims * (numB + numO) + blockSize - 1) / blockSize;
+    int gridSize = (cars + blockSize - 1) / blockSize;
 
-    CUDA_CHECK(cudaMemset(d_debug, 0, sizeof(int)));
-    carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_debug);
+    // Reset pair count before broad phase
+    cudaMemset(m_space.count, 0, sizeof(int));
+
+    carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
     cudaDeviceSynchronize();
 
     return d_output;

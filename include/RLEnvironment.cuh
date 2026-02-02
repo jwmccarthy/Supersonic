@@ -10,17 +10,20 @@ class RLEnvironment
 private:
     GameState  m_state;
     GameState* d_state;
+
     ArenaMesh  m_arena;
     ArenaMesh* d_arena;
-    float*     d_output;
 
-    // Debug accumulator
-    int* d_debug;
+    Workspace  m_space;
+    Workspace* d_space;
+    
+    float*     d_output;
 
 public:
     int sims;
     int numB;
     int numO;
+    int cars;
     int seed;
 
     RLEnvironment(int sims, int numB, int numO, int seed);

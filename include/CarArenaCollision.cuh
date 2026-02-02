@@ -5,7 +5,7 @@
 #include "RLConstants.cuh"
 #include "GameState.cuh"
 #include "ArenaMesh.cuh"
-#include "Reflection.hpp"
+constexpr int MAX_PER_CAR = 64;
 
 struct AABB
 {
@@ -46,7 +46,7 @@ __device__ __forceinline__ AABB getCarAABB(ArenaMesh* arena, float4 pos, float4 
     return { aabbMin, aabbMax };
 }
 
-__device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* arena, int carIdx, int* debug)
+__device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* arena, Workspace* space, int carIdx)
 {
     // Cached access of car state
     float4 pos = __ldg(&state->cars.position[carIdx]);
@@ -58,8 +58,6 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
     // Get bound grid cell indices
     int3 cellMin = arena->getCellIdx(aabbMin);
     int3 cellMax = arena->getCellIdx(aabbMax);
-
-    int overlaps = 0;
 
     for (int x = cellMin.x; x <= cellMax.x; ++x)
     for (int y = cellMin.y; y <= cellMax.y; ++y)
@@ -80,10 +78,14 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
             float4 triMax = __ldg(&arena->aabbMax[triIdx]);
 
             // Test AABB overlap
-            overlaps += vec3::lte(aabbMin, triMax) && vec3::gte(aabbMax, triMin);
+            bool overlap = vec3::lte(aabbMin, triMax) && vec3::gte(aabbMax, triMin);
+
+            // Write to candidate pairs
+            if (overlap)
+            {
+                int idx = atomicAdd(space->count, 1);
+                space->pairs[idx] = {carIdx, triIdx};
+            }
         }
     }
-
-    // Keep nu
-    state->cars.numTris[carIdx] = overlaps;
 }
