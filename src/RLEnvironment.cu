@@ -34,7 +34,7 @@ float* RLEnvironment::step()
     cudaMemset(&d_space->broadDone, 0, sizeof(int));
 
     // Broad phase tail-launches narrow phase
-    carArenaBroadPhaseKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
+    carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
     cudaDeviceSynchronize();
 
     return d_output;

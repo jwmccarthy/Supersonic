@@ -24,13 +24,14 @@ __global__ void carArenaNarrowPhaseKernel(GameState* state, ArenaMesh* arena, Wo
     carArenaNarrowPhase(state, arena, space, pairIdx);
 }
 
-__global__ void carArenaBroadPhaseKernel(GameState* state, ArenaMesh* arena, Workspace* space)
+__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, Workspace* space)
 {
     int carIdx = blockIdx.x * blockDim.x + threadIdx.x;
     int totalCars = state->sims * state->nCar;
 
     // Reset count (single thread)
     if (carIdx == 0) space->count = 0;
+
     __syncthreads();
 
     // Broad phase
@@ -41,6 +42,7 @@ __global__ void carArenaBroadPhaseKernel(GameState* state, ArenaMesh* arena, Wor
 
     // Last block tail-launches narrow phase
     __shared__ int lastBlock;
+
     if (threadIdx.x == 0)
     {
         lastBlock = atomicAdd(&space->broadDone, 1) == (gridDim.x - 1);
@@ -51,6 +53,7 @@ __global__ void carArenaBroadPhaseKernel(GameState* state, ArenaMesh* arena, Wor
     {
         int blockSize = 128;
         int gridSize = (space->count + blockSize - 1) / blockSize;
+
         if (gridSize > 0)
         {
             carArenaNarrowPhaseKernel<<<gridSize, blockSize>>>(state, arena, space);
