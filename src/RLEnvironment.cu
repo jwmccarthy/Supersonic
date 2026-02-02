@@ -30,8 +30,8 @@ float* RLEnvironment::step()
     int blockSize = 128;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
-    cudaMemset(&d_space->count, 0, sizeof(int));
-    carArenaBroadPhaseKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
+    void* args[] = { &d_state, &d_arena, &d_space };
+    cudaLaunchCooperativeKernel((void*)carArenaCollisionKernel, gridSize, blockSize, args);
     cudaDeviceSynchronize();
 
     return d_output;
@@ -43,6 +43,7 @@ float* RLEnvironment::reset()
     int gridSize = (sims + blockSize - 1) / blockSize;
 
     resetKernel<<<gridSize, blockSize>>>(d_state);
+    cudaDeviceSynchronize();
 
     return d_output;
 }

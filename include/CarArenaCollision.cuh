@@ -46,7 +46,11 @@ __device__ __forceinline__ AABB getCarAABB(ArenaMesh* arena, float4 pos, float4 
     return { aabbMin, aabbMax };
 }
 
-__device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* arena, Workspace* space, int carIdx)
+__device__ __forceinline__ void carArenaBroadPhase(
+    GameState* state, 
+    ArenaMesh* arena, 
+    Workspace* space,
+    int carIdx)
 {
     // Cached access of car state
     float4 pos = __ldg(&state->cars.position[carIdx]);
@@ -77,15 +81,31 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
             float4 triMin = __ldg(&arena->aabbMin[triIdx]);
             float4 triMax = __ldg(&arena->aabbMax[triIdx]);
 
-            // Test AABB overlap
             bool overlap = vec3::lte(aabbMin, triMax) && vec3::gte(aabbMax, triMin);
 
-            // Write to candidate pairs
             if (overlap)
             {
+                // Atomic index for candidate pairs
                 int idx = atomicAdd(&space->count, 1);
                 space->pairs[idx] = {carIdx, triIdx};
             }
         }
     }
+}
+
+__device__ __forceinline__ void carArenaNarrowPhase(
+    GameState* state, 
+    ArenaMesh* arena, 
+    Workspace* space, 
+    int pairIdx)
+{
+    // Cached read of pair indices
+    auto [carIdx, triIdx] = __ldg(&space->pairs[pairIdx]);
+
+    // Cached access of car state
+    float4 pos = __ldg(&state->cars.position[carIdx]);
+    float4 rot = __ldg(&state->cars.rotation[carIdx]);
+    
+    // Cached read of candidate tri
+    auto [v0, v1, v2] = getTriVerts(arena, triIdx);
 }

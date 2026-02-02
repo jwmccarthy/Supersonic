@@ -71,8 +71,8 @@ __device__ __forceinline__ void randomizeInitialPositions(GameState* state, int 
     const int numO = state->numO;
     const int nCar = state->nCar;
 
-    // Base seed
-    int seed = hash(simIdx ^ (sims * 31));
+    // Base seed - hash seed first, then combine with simIdx
+    int seed = hash(hash(state->seed) + simIdx);
 
     // Randomize ball position
     Ball* ball = &state->ball;
