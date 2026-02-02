@@ -1,5 +1,4 @@
 #include <cuda_runtime.h>
-#include <cooperative_groups.h>
 
 #include "CudaKernels.cuh"
 #include "CudaMath.cuh"
@@ -9,8 +8,6 @@
 #include "StateReset.cuh"
 #include "CarArenaCollision.cuh"
 
-namespace cg = cooperative_groups;
-
 __global__ void resetKernel(GameState* state)
 {
     int simIdx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -19,29 +16,44 @@ __global__ void resetKernel(GameState* state)
     randomizeInitialPositions(state, simIdx);
 }
 
-__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, Workspace* space)
+__global__ void carArenaNarrowPhaseKernel(GameState* state, ArenaMesh* arena, Workspace* space)
 {
-    cg::grid_group grid = cg::this_grid();
+    int pairIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (pairIdx >= space->count) return;
 
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int str = gridDim.x * blockDim.x;
+    carArenaNarrowPhase(state, arena, space, pairIdx);
+}
 
-    // Reset count
-    if (idx == 0) space->count = 0;
+__global__ void carArenaBroadPhaseKernel(GameState* state, ArenaMesh* arena, Workspace* space)
+{
+    int carIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    int totalCars = state->sims * state->nCar;
 
-    grid.sync();
+    // Reset count (single thread)
+    if (carIdx == 0) space->count = 0;
+    __syncthreads();
 
-    // Broad phase - grid-stride loop
-    for (int carIdx = idx; carIdx < state->sims * state->nCar; carIdx += str)
+    // Broad phase
+    if (carIdx < totalCars)
     {
         carArenaBroadPhase(state, arena, space, carIdx);
     }
 
-    grid.sync();
-
-    // Narrow phase - grid-stride loop
-    for (int pairIdx = idx; pairIdx < space->count; pairIdx += str)
+    // Last block tail-launches narrow phase
+    __shared__ int lastBlock;
+    if (threadIdx.x == 0)
     {
-        carArenaNarrowPhase(state, arena, space, pairIdx);
+        lastBlock = atomicAdd(&space->broadDone, 1) == (gridDim.x - 1);
+    }
+    __syncthreads();
+
+    if (lastBlock && threadIdx.x == 0)
+    {
+        int blockSize = 128;
+        int gridSize = (space->count + blockSize - 1) / blockSize;
+        if (gridSize > 0)
+        {
+            carArenaNarrowPhaseKernel<<<gridSize, blockSize>>>(state, arena, space);
+        }
     }
 }

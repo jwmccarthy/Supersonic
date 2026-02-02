@@ -31,6 +31,7 @@ struct REFLECT Workspace
 {
     int2* pairs;
     int   count = 0;
+    int   broadDone = 0;  // For tail launch synchronization
 };
 
 struct GameState

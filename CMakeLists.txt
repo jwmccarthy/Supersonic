@@ -50,3 +50,6 @@ target_compile_options(supersonic PRIVATE
 )
 
 target_link_libraries(supersonic PRIVATE CUDA::cudart)
+
+# Enable dynamic parallelism (device runtime)
+set_target_properties(supersonic PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)

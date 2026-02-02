@@ -27,8 +27,14 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 
 float* RLEnvironment::step()
 {
-    void* args[] = { &d_state, &d_arena, &d_space };
-    launchCoopKernel(carArenaCollisionKernel, 128, args);
+    int blockSize = 128;
+    int gridSize = (cars + blockSize - 1) / blockSize;
+
+    // Reset broadDone counter
+    cudaMemset(&d_space->broadDone, 0, sizeof(int));
+
+    // Broad phase tail-launches narrow phase
+    carArenaBroadPhaseKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
     cudaDeviceSynchronize();
 
     return d_output;
