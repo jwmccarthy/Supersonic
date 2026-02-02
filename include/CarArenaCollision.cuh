@@ -95,18 +95,87 @@ __device__ __forceinline__ void carArenaBroadPhase(
 }
 
 __device__ __forceinline__ void carArenaNarrowPhase(
-    GameState* state, 
-    ArenaMesh* arena, 
-    Workspace* space, 
+    GameState* state,
+    ArenaMesh* arena,
+    Workspace* space,
     int pairIdx)
 {
     // Cached read of pair indices
     auto [carIdx, triIdx] = __ldg(&space->pairs[pairIdx]);
 
-    // Cached access of car state
-    float4 pos = __ldg(&state->cars.position[carIdx]);
-    float4 rot = __ldg(&state->cars.rotation[carIdx]);
-    
-    // Cached read of candidate tri
+    // Car state
+    float4 carPos = __ldg(&state->cars.position[carIdx]);
+    float4 carRot = __ldg(&state->cars.rotation[carIdx]);
+
+    // Box center in world space (car position + rotated offset)
+    float4 boxCenter = vec3::add(carPos, quat::toWorld(CAR_OFFSETS, carRot));
+
+    // Get triangle vertices in world space
     auto [v0, v1, v2] = getTriVerts(arena, triIdx);
+
+    // Transform triangle to box-local space (box centered at origin, axis-aligned)
+    float4 t0 = quat::toLocal(vec3::sub(v0, boxCenter), carRot);
+    float4 t1 = quat::toLocal(vec3::sub(v1, boxCenter), carRot);
+    float4 t2 = quat::toLocal(vec3::sub(v2, boxCenter), carRot);
+
+    // Triangle edges (in local space)
+    float4 e0 = vec3::sub(t1, t0);
+    float4 e1 = vec3::sub(t2, t1);
+    float4 e2 = vec3::sub(t0, t2);
+
+    // Test separation on axis; returns true if separated
+    auto separated = [&](float4 axis) {
+        float lenSq = vec3::dot(axis, axis);
+        if (lenSq < 1e-8f) return false;
+
+        float p0 = vec3::dot(t0, axis);
+        float p1 = vec3::dot(t1, axis);
+        float p2 = vec3::dot(t2, axis);
+        float triMin = fminf(fminf(p0, p1), p2);
+        float triMax = fmaxf(fmaxf(p0, p1), p2);
+
+        float boxRadius = fabsf(axis.x) * CAR_HALF_EX.x
+                        + fabsf(axis.y) * CAR_HALF_EX.y
+                        + fabsf(axis.z) * CAR_HALF_EX.z;
+
+        return triMin > boxRadius || triMax < -boxRadius;
+    };
+
+    // Box face normals (axis-aligned in local space)
+    bool sepX = fminf(fminf(t0.x, t1.x), t2.x) > CAR_HALF_EX.x ||
+                fmaxf(fmaxf(t0.x, t1.x), t2.x) < -CAR_HALF_EX.x;
+    bool sepY = fminf(fminf(t0.y, t1.y), t2.y) > CAR_HALF_EX.y ||
+                fmaxf(fmaxf(t0.y, t1.y), t2.y) < -CAR_HALF_EX.y;
+    bool sepZ = fminf(fminf(t0.z, t1.z), t2.z) > CAR_HALF_EX.z ||
+                fmaxf(fmaxf(t0.z, t1.z), t2.z) < -CAR_HALF_EX.z;
+
+    // Triangle face normal
+    bool sepTri = separated(vec3::cross(e0, e1));
+
+    // Cross-product axes (box edges x triangle edges)
+    float4 boxX = {1, 0, 0, 0};
+    float4 boxY = {0, 1, 0, 0};
+    float4 boxZ = {0, 0, 1, 0};
+
+    bool sepXe0 = separated(vec3::cross(boxX, e0));
+    bool sepXe1 = separated(vec3::cross(boxX, e1));
+    bool sepXe2 = separated(vec3::cross(boxX, e2));
+    bool sepYe0 = separated(vec3::cross(boxY, e0));
+    bool sepYe1 = separated(vec3::cross(boxY, e1));
+    bool sepYe2 = separated(vec3::cross(boxY, e2));
+    bool sepZe0 = separated(vec3::cross(boxZ, e0));
+    bool sepZe1 = separated(vec3::cross(boxZ, e1));
+    bool sepZe2 = separated(vec3::cross(boxZ, e2));
+
+    bool anySeparated = sepX | sepY | sepZ | sepTri |
+                        sepXe0 | sepXe1 | sepXe2 |
+                        sepYe0 | sepYe1 | sepYe2 |
+                        sepZe0 | sepZe1 | sepZe2;
+
+    if (!anySeparated)
+    {
+        // All 13 axes show overlap - collision detected
+        // TODO: Compute contact point, normal, and penetration depth
+        atomicAdd(&state->cars.numTris[carIdx], 1);
+    }
 }
