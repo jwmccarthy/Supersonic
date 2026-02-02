@@ -83,7 +83,7 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
             // Write to candidate pairs
             if (overlap)
             {
-                int idx = atomicAdd(space->count, 1);
+                int idx = atomicAdd(&space->count, 1);
                 space->pairs[idx] = {carIdx, triIdx};
             }
         }

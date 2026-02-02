@@ -18,7 +18,7 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     cudaMallocCpy(d_state, &m_state);
 
     // Allocate intermediate workspaces
-    cudaMallocSOA(m_space, { 1, cars * MAX_PER_CAR });
+    cudaMallocSOA(m_space, cars * MAX_PER_CAR);
     cudaMallocCpy(d_space, &m_space);
 
     // Allocate output buffer
@@ -30,10 +30,8 @@ float* RLEnvironment::step()
     int blockSize = 128;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
-    // Reset pair count before broad phase
-    cudaMemset(m_space.count, 0, sizeof(int));
-
-    carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
+    cudaMemset(&d_space->count, 0, sizeof(int));
+    carArenaBroadPhaseKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
     cudaDeviceSynchronize();
 
     return d_output;

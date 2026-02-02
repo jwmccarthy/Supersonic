@@ -29,8 +29,8 @@ struct REFLECT Pads
 
 struct REFLECT Workspace
 {
-    int*  count;
     int2* pairs;
+    int   count = 0;
 };
 
 struct GameState
