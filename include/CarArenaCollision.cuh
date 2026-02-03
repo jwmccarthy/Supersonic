@@ -50,6 +50,9 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
 
     int overlaps = 0;
 
+    auto [minX, minY, minZ, minW] = aabbMin;
+    auto [maxX, maxY, maxZ, maxW] = aabbMax;
+
     for (int x = cellMin.x; x <= cellMax.x; ++x)
     for (int y = cellMin.y; y <= cellMax.y; ++y)
     for (int z = cellMin.z; z <= cellMax.z; ++z)
@@ -60,18 +63,28 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
         int triBeg = __ldg(&arena->triPre[cellIdx]);
         int triEnd = __ldg(&arena->triPre[cellIdx + 1]);
 
-        for (int t = 0; t < triEnd - triBeg; ++t)
+        for (int t = triBeg; t < triEnd; ++t)
         {
-            int triIdx = __ldg(&arena->triIdx[triBeg + t]);
+            int triIdx = __ldg(&arena->triIdx[t]);
 
             // Triangle AABB
             float4 triMin = __ldg(&arena->aabbMin[triIdx]);
             float4 triMax = __ldg(&arena->aabbMax[triIdx]);
 
             // Test AABB overlap
-            overlaps += vec3::lte(aabbMin, triMax) && vec3::gte(aabbMax, triMin);
+            overlaps += (
+                minX <= triMax.x && maxX >= triMin.x &&
+                minY <= triMax.y && maxY >= triMin.y &&
+                minZ <= triMax.z && maxZ >= triMin.z
+            );
         }
     }
 
-    atomicAdd(debug, overlaps);
+    int lane = threadIdx.x & 31;  
+
+    #pragma unroll                                                    
+    for (int offset = 16; offset > 0; offset >>= 1)                   
+        overlaps += __shfl_down_sync(0xffffffff, overlaps, offset);   
+                                                                      
+    if (lane == 0) atomicAdd(debug, overlaps);     
 }

@@ -8,6 +8,7 @@
 
 RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     : sims(sims), numB(numB), numO(numO), seed(seed)
+    , cars(sims * (numB + numO))
     , m_arena(MESH_PATH)
     , m_state(sims, numB, numO, seed)
 {
@@ -24,8 +25,7 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 
 float* RLEnvironment::step()
 {
-    int cars = sims * (numB + numO);
-    int blockSize = 128;
+    int blockSize = 256;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
     CUDA_CHECK(cudaMemset(d_debug, 0, sizeof(int)));

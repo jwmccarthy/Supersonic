@@ -19,6 +19,7 @@ private:
 
 public:
     int sims;
+    int cars;
     int numB;
     int numO;
     int seed;
