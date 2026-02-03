@@ -41,6 +41,8 @@ int main()
     float gpuMs = 0;
     cudaEventElapsedTime(&gpuMs, start, stop);
 
+    env.printSatStats();
+
     second wallTime = t1 - t0;
     float avgUs = (gpuMs * 1000.0f) / iter;
 

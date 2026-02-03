@@ -39,17 +39,23 @@ float* RLEnvironment::step()
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
     cudaDeviceSynchronize();
 
-    // Debug: print SAT hit proportion
+    // Debug: accumulate SAT hit stats
     int totalPairs, satHits;
     cudaMemcpy(&totalPairs, &d_space->count, sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(&satHits, &d_space->narrowHits, sizeof(int), cudaMemcpyDeviceToHost);
-    if (totalPairs > 0)
-    {
-        std::cout << "SAT: " << satHits << "/" << totalPairs
-                  << " pairs had contacts (" << (100.0f * satHits / totalPairs) << "%)" << std::endl;
-    }
+    debugTotalPairs += totalPairs;
+    debugSatHits += satHits;
 
     return d_output;
+}
+
+void RLEnvironment::printSatStats()
+{
+    if (debugTotalPairs > 0)
+    {
+        std::cout << "SAT: " << debugSatHits << "/" << debugTotalPairs
+                  << " pairs had contacts (" << (100.0 * debugSatHits / debugTotalPairs) << "%)" << std::endl;
+    }
 }
 
 float* RLEnvironment::reset()
