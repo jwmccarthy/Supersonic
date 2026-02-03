@@ -45,12 +45,11 @@ int main()
     second wallTime = t1 - t0;
     float avgUs = (gpuMs * 1000.0f) / iter;
 
-    // Direct memcpy from profile.cu to bypass RLEnvironment.cu
-    int directCount = -1, directHits = -1;
+    // Copy entire Workspace struct back to host
+    Workspace hostSpace;
     Workspace* ws = env.getWorkspace();
-    cudaMemcpy(&directCount, &ws->count, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&directHits, &ws->narrowHits, sizeof(int), cudaMemcpyDeviceToHost);
-    std::cout << "Direct check:  count=" << directCount << " hits=" << directHits << "\n";
+    cudaMemcpy(&hostSpace, ws, sizeof(Workspace), cudaMemcpyDeviceToHost);
+    std::cout << "Direct check:  count=" << hostSpace.count << " hits=" << hostSpace.narrowHits << "\n";
 
     double satPct = (env.debugTotalPairs > 0) ? (100.0 * env.debugSatHits / env.debugTotalPairs) : 0.0;
     std::cout << "SAT hits:      " << env.debugSatHits << "/" << env.debugTotalPairs << " (" << satPct << "%)\n";
