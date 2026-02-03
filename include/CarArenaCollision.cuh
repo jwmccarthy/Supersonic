@@ -321,13 +321,17 @@ __device__ __forceinline__ void carArenaNarrowPhase(
         numContacts = 1;
     }
 
-    // Transform contacts to world space and store
+    // Transform contacts to world space
+    float4 worldNormal = quat::toWorld(minAxis, carRot);
+    float4 avgContact = {0, 0, 0, 0};
     for (int i = 0; i < numContacts; ++i)
     {
         float4 worldContact = vec3::add(boxCenter, quat::toWorld(contacts[i], carRot));
-        // TODO: Store worldContact, worldNormal, and depth for collision response
+        avgContact = vec3::add(avgContact, worldContact);
     }
+    if (numContacts > 0) avgContact = vec3::mult(avgContact, 1.0f / numContacts);
 
-    float4 worldNormal = quat::toWorld(minAxis, carRot);
-    atomicAdd(&state->cars.numTris[carIdx], 1);
+    // Force compiler to keep all computations (for profiling)
+    float forceKeep = minPen + worldNormal.x + avgContact.x + avgContact.y + avgContact.z;
+    atomicAdd(&state->cars.numTris[carIdx], numContacts + (int)(forceKeep * 0.001f));
 }
