@@ -19,11 +19,10 @@ private:
 
     float*     d_output;
 
+public:
     // Debug stats
     long long  debugTotalPairs = 0;
     long long  debugSatHits = 0;
-
-public:
     int sims;
     int numB;
     int numO;

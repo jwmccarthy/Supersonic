@@ -41,11 +41,11 @@ int main()
     float gpuMs = 0;
     cudaEventElapsedTime(&gpuMs, start, stop);
 
-    env.printSatStats();
-
     second wallTime = t1 - t0;
     float avgUs = (gpuMs * 1000.0f) / iter;
 
+    double satPct = (env.debugTotalPairs > 0) ? (100.0 * env.debugSatHits / env.debugTotalPairs) : 0.0;
+    std::cout << "SAT hits:      " << env.debugSatHits << "/" << env.debugTotalPairs << " (" << satPct << "%)\n";
     std::cout << "Iterations:    " << iter << "\n";
     std::cout << "Wall time:     " << wallTime.count() << " s\n";
     std::cout << "GPU time:      " << gpuMs << " ms\n";
