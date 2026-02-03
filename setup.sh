@@ -1,9 +1,4 @@
 #!/bin/bash
-set -e
-
-# Clone the repository via HTTPS
-git clone https://github.com/jwmccarthy/Supersonic.git
-cd Supersonic
 
 # Install dependencies
 apt-get update
