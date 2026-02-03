@@ -5,7 +5,7 @@ out/
 bin/
 lib/
 *.o
-*.obj
+# *.obj
 *.a
 *.so
 *.dylib
