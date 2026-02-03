@@ -30,12 +30,23 @@ float* RLEnvironment::step()
     int blockSize = 128;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
-    // Reset broadDone counter
+    // Reset counters
     cudaMemset(&d_space->broadDone, 0, sizeof(int));
+    cudaMemset(&d_space->narrowHits, 0, sizeof(int));
 
     // Broad phase tail-launches narrow phase
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
     cudaDeviceSynchronize();
+
+    // Debug: print SAT hit proportion
+    int totalPairs, satHits;
+    cudaMemcpy(&totalPairs, &d_space->count, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&satHits, &d_space->narrowHits, sizeof(int), cudaMemcpyDeviceToHost);
+    if (totalPairs > 0)
+    {
+        printf("SAT: %d/%d pairs had contacts (%.1f%%)\n",
+               satHits, totalPairs, 100.0f * satHits / totalPairs);
+    }
 
     return d_output;
 }

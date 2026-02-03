@@ -218,6 +218,9 @@ __device__ __forceinline__ void carArenaNarrowPhase(
 
     if (separated) return;
 
+    // Debug: count triangles that passed SAT
+    atomicAdd(&space->narrowHits, 1);
+
     // Contact points in box-local space (max 4)
     float4 contacts[4];
     int numContacts = 0;
