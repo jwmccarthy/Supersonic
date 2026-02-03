@@ -3,7 +3,6 @@
 #include <cuda_runtime.h>
 
 #include "RLEnvironment.cuh"
-#include "GameState.cuh"
 
 int main()
 {
@@ -45,14 +44,6 @@ int main()
     second wallTime = t1 - t0;
     float avgUs = (gpuMs * 1000.0f) / iter;
 
-    // Copy entire Workspace struct back to host
-    Workspace hostSpace;
-    Workspace* ws = env.getWorkspace();
-    cudaMemcpy(&hostSpace, ws, sizeof(Workspace), cudaMemcpyDeviceToHost);
-    std::cout << "Direct check:  count=" << hostSpace.count << " hits=" << hostSpace.narrowHits << "\n";
-
-    double satPct = (env.debugTotalPairs > 0) ? (100.0 * env.debugSatHits / env.debugTotalPairs) : 0.0;
-    std::cout << "SAT hits:      " << env.debugSatHits << "/" << env.debugTotalPairs << " (" << satPct << "%)\n";
     std::cout << "Iterations:    " << iter << "\n";
     std::cout << "Wall time:     " << wallTime.count() << " s\n";
     std::cout << "GPU time:      " << gpuMs << " ms\n";

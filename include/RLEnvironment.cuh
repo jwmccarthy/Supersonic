@@ -20,9 +20,6 @@ private:
     float*     d_output;
 
 public:
-    // Debug stats
-    long long  debugTotalPairs = 0;
-    long long  debugSatHits = 0;
     int sims;
     int numB;
     int numO;
@@ -34,8 +31,4 @@ public:
     // Gymnasium API
     float* step();
     float* reset();
-
-    // Debug
-    void printSatStats();
-    Workspace* getWorkspace() { return d_space; }
 };

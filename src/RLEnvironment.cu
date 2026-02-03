@@ -1,5 +1,4 @@
 #include <cuda_runtime.h>
-#include <iostream>
 
 #include "CudaCommon.cuh"
 #include "CudaKernels.cuh"
@@ -31,37 +30,14 @@ float* RLEnvironment::step()
     int blockSize = 128;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
-    // Reset counters
+    // Reset broadDone counter
     cudaMemset(&d_space->broadDone, 0, sizeof(int));
-    cudaMemset(&d_space->narrowHits, 0, sizeof(int));
 
     // Broad phase tail-launches narrow phase
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
     cudaDeviceSynchronize();
 
-    // Debug: accumulate SAT hit stats
-    int totalPairs = -1, satHits = -1;
-    cudaError_t e1 = cudaMemcpy(&totalPairs, &d_space->count, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaError_t e2 = cudaMemcpy(&satHits, &d_space->narrowHits, sizeof(int), cudaMemcpyDeviceToHost);
-    if (debugTotalPairs == 0 && (e1 != cudaSuccess || e2 != cudaSuccess || totalPairs < 0))
-    {
-        std::cerr << "cudaMemcpy failed: e1=" << cudaGetErrorString(e1)
-                  << " e2=" << cudaGetErrorString(e2)
-                  << " totalPairs=" << totalPairs << " satHits=" << satHits << std::endl;
-    }
-    debugTotalPairs += totalPairs;
-    debugSatHits += satHits;
-
     return d_output;
-}
-
-void RLEnvironment::printSatStats()
-{
-    if (debugTotalPairs > 0)
-    {
-        std::cerr << "SAT: " << debugSatHits << "/" << debugTotalPairs
-                  << " pairs had contacts (" << (100.0 * debugSatHits / debugTotalPairs) << "%)" << std::endl;
-    }
 }
 
 float* RLEnvironment::reset()

@@ -32,7 +32,6 @@ struct REFLECT Workspace
     int2* pairs;
     int   count = 0;
     int   broadDone = 0;  // For tail launch synchronization
-    int   narrowHits = 0; // Triangles that passed SAT (debug)
 };
 
 struct GameState

@@ -136,7 +136,6 @@ ArenaMesh::ArenaMesh(const char* path)
 {
     // Construct broadphase grid
     Mesh m = loadMeshObj(path);
-    std::cout << "Loaded mesh: " << nVerts << " verts, " << nTris << " tris" << std::endl;
     Grid g = buildBroadphaseGrid(m);
 
     // Allocate/copy mesh array pointers
