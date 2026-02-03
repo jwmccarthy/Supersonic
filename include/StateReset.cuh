@@ -66,7 +66,6 @@ __device__ __forceinline__ void resetToKickoff(GameState* state, int simIdx)
 
 __device__ __forceinline__ void randomizeInitialPositions(GameState* state, int simIdx)
 {
-    const int sims = state->sims;
     const int numB = state->numB;
     const int numO = state->numO;
     const int nCar = state->nCar;

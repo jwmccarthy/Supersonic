@@ -224,5 +224,7 @@ __device__ __forceinline__ void carArenaNarrowPhase(
 
         // TODO: Use worldNormal and minPen for collision response
         atomicAdd(&state->cars.numTris[carIdx], 1);
+
+        printf("%d\n", pairIdx);
     }
 }
