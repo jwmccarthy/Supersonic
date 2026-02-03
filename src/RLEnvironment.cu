@@ -53,7 +53,7 @@ void RLEnvironment::printSatStats()
 {
     if (debugTotalPairs > 0)
     {
-        std::cout << "SAT: " << debugSatHits << "/" << debugTotalPairs
+        std::cerr << "SAT: " << debugSatHits << "/" << debugTotalPairs
                   << " pairs had contacts (" << (100.0 * debugSatHits / debugTotalPairs) << "%)" << std::endl;
     }
 }
