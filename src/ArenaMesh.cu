@@ -25,6 +25,11 @@ Mesh ArenaMesh::loadMeshObj(const char* path)
     std::string line;
     std::ifstream file(path);
 
+    if (!file.is_open())
+    {
+        std::cerr << "ERROR: Failed to open mesh file: " << path << "\n";
+    }
+
     // Output vectors
     std::vector<float4> verts;
     std::vector<int4> tris;

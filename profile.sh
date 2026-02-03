@@ -1,20 +1,20 @@
 #!/bin/bash
 
-cd "$(dirname "$0")/build"
+cd "$(dirname "$0")"
 
 case "$1" in
     -v)
-        ncu --set full ./supersonic
+        ncu --set full ./build/supersonic
         ;;
     -o)
-        ncu --set full -o "${2:-profile}" ./supersonic
-        echo "Output: $(pwd)/${2:-profile}.ncu-rep"
+        ncu --set full -o "build/${2:-profile}" ./build/supersonic
+        echo "Output: $(pwd)/build/${2:-profile}.ncu-rep"
         ;;
     -f)
-        ncu --set full --force-overwrite -o "${2:-profile}" ./supersonic
-        echo "Output: $(pwd)/${2:-profile}.ncu-rep"
+        ncu --set full --force-overwrite -o "build/${2:-profile}" ./build/supersonic
+        echo "Output: $(pwd)/build/${2:-profile}.ncu-rep"
         ;;
     *)
-        ncu --metrics gpu__time_duration.avg ./supersonic
+        ncu --metrics gpu__time_duration.avg ./build/supersonic
         ;;
 esac
