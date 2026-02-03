@@ -3,7 +3,7 @@ project(supersonic LANGUAGES CXX CUDA)
 
 # CUDA setup
 find_package(CUDAToolkit REQUIRED)
-set(CMAKE_CUDA_ARCHITECTURES native)
+set(CMAKE_CUDA_ARCHITECTURES "89;120")
 
 # Reflection plugin
 add_subdirectory(plugin)
