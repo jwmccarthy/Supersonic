@@ -4,6 +4,15 @@
 
 #include "RLEnvironment.cuh"
 
+#define CUDA_CHECK(call) do { \
+    cudaError_t err = call; \
+    if (err != cudaSuccess) { \
+        std::cerr << "CUDA error at " << __FILE__ << ":" << __LINE__ \
+                  << " - " << cudaGetErrorString(err) << std::endl; \
+        return 1; \
+    } \
+} while(0)
+
 int main()
 {
     using clock  = std::chrono::steady_clock;
@@ -14,30 +23,44 @@ int main()
     const int seed = 111;
     const int iter = 10000;
 
+    std::cout << "Creating environment..." << std::flush;
     RLEnvironment env{sims, nCar, nCar, seed};
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+    std::cout << " done" << std::endl;
 
-    // CUDA events for kernel timing
     cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    CUDA_CHECK(cudaEventCreate(&start));
+    CUDA_CHECK(cudaEventCreate(&stop));
 
+    std::cout << "Reset..." << std::flush;
     env.reset();
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+    std::cout << " done" << std::endl;
+
+    std::cout << "Warmup..." << std::flush;
 
     for (int i = 0; i < 1000; i++)
         env.step();
-    cudaDeviceSynchronize();
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+    std::cout << " done" << std::endl;
 
+    std::cout << "Running " << iter << " iterations..." << std::flush;
     auto t0 = clock::now();
-    cudaEventRecord(start);
+    CUDA_CHECK(cudaEventRecord(start));
 
     for (int i = 0; i < iter; i++)
     {
         env.step();
     }
 
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
+    CUDA_CHECK(cudaEventRecord(stop));
+    CUDA_CHECK(cudaEventSynchronize(stop));
+    CUDA_CHECK(cudaGetLastError());
     auto t1 = clock::now();
+    std::cout << " done" << std::endl;
 
     float gpuMs = 0;
     cudaEventElapsedTime(&gpuMs, start, stop);
