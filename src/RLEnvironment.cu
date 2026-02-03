@@ -30,8 +30,6 @@ float* RLEnvironment::step()
     int blockSize = 128;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
-    // Reset broadDone counter
-    cudaMemset(&d_space->broadDone, 0, sizeof(int));
 
     // Broad phase tail-launches narrow phase
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
