@@ -218,13 +218,9 @@ __device__ __forceinline__ void carArenaNarrowPhase(
 
     if (!separated)
     {
-        // minAxis is contact normal (in car-local space), minPen is penetration depth
-        // Transform normal to world space
         float4 worldNormal = quat::toWorld(minAxis, carRot);
 
         // TODO: Use worldNormal and minPen for collision response
         atomicAdd(&state->cars.numTris[carIdx], 1);
-
-        printf("%d\n", pairIdx);
     }
 }
