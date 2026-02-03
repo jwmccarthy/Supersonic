@@ -39,14 +39,14 @@ float* RLEnvironment::step()
     cudaDeviceSynchronize();
 
     // Debug: print SAT hit proportion
-    int totalPairs, satHits;
-    cudaMemcpy(&totalPairs, &d_space->count, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&satHits, &d_space->narrowHits, sizeof(int), cudaMemcpyDeviceToHost);
-    if (totalPairs > 0)
-    {
-        printf("SAT: %d/%d pairs had contacts (%.1f%%)\n",
-               satHits, totalPairs, 100.0f * satHits / totalPairs);
-    }
+    // int totalPairs, satHits;
+    // cudaMemcpy(&totalPairs, &d_space->count, sizeof(int), cudaMemcpyDeviceToHost);
+    // cudaMemcpy(&satHits, &d_space->narrowHits, sizeof(int), cudaMemcpyDeviceToHost);
+    // if (totalPairs > 0)
+    // {
+    //     printf("SAT: %d/%d pairs had contacts (%.1f%%)\n",
+    //            satHits, totalPairs, 100.0f * satHits / totalPairs);
+    // }
 
     return d_output;
 }
