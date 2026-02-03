@@ -78,13 +78,19 @@ __device__ __forceinline__ void carArenaBroadPhase(
         {
             int triIdx = __ldg(&arena->triIdx[triBeg + t]);
 
+            // Find tri canonical cell for dedup per-car
+            int4 c = __ldg(&arena->triCellMin[triIdx]);
+            int3 canon = vec3::max(cellMin, {c.x, c.y, c.z});
+
             // Triangle AABB
             float4 triMin = __ldg(&arena->aabbMin[triIdx]);
             float4 triMax = __ldg(&arena->aabbMax[triIdx]);
 
+            // Checks prior to emission
+            bool isCanon = vec3::eq(canon, {x, y, z});
             bool overlap = vec3::lte(aabbMin, triMax) && vec3::gte(aabbMax, triMin);
 
-            if (overlap)
+            if (isCanon && overlap)
             {
                 // Atomic index for candidate pairs
                 int idx = atomicAdd(&space->count, 1);

@@ -52,6 +52,9 @@ struct ArenaMesh
     float4* aabbMin;
     float4* aabbMax;
 
+    // Min cell per-tri for dedup
+    int4* triCellMin;
+
     // Broadphase grid
     int* triIdx;
     int* triPre;

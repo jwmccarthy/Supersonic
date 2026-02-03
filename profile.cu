@@ -9,7 +9,7 @@ int main()
     using clock  = std::chrono::steady_clock;
     using second = std::chrono::duration<double>;
 
-    const int sims = 128;
+    const int sims = 1024;
     const int nCar = 4;
     const int seed = 111;
     const int iter = 10000;
