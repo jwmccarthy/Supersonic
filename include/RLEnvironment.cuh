@@ -37,4 +37,5 @@ public:
 
     // Debug
     void printSatStats();
+    Workspace* getWorkspace() { return d_space; }
 };
