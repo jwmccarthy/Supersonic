@@ -74,8 +74,6 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
     // Tri accumulators for grid cells
     std::vector<std::vector<int>> cells(nCells);
 
-    std::vector<int4> cellMin(m.tris.size());
-
     for (int i = 0; i < m.tris.size(); ++i)
     {
         int4 tri = m.tris[i];
@@ -94,8 +92,6 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
         int3 lo = vec3::min(vec3::min(cX, cY), cZ);
         int3 hi = vec3::max(vec3::max(cX, cY), cZ);
 
-        cellMin[i] = {lo.x, lo.y, lo.z, 0};
-
         // Iterate over potential cells
         for (int x = lo.x; x <= hi.x; ++x)
         for (int y = lo.y; y <= hi.y; ++y)
@@ -111,9 +107,6 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
         m.aabbMin[i] = vec3::min(vec3::min(v0, v1), v2);
         m.aabbMax[i] = vec3::max(vec3::max(v0, v1), v2);
     }
-
-    // Copy triCellMin to device
-    cudaMallocCpy(triCellMin, cellMin.data(), cellMin.size());
 
     // 1D grid storage via prefix sum
     std::vector<int> triPre(nCells + 1, 0);
@@ -137,6 +130,14 @@ ArenaMesh::ArenaMesh(const char* path)
     // Construct broadphase grid
     Mesh m = loadMeshObj(path);
     Grid g = buildBroadphaseGrid(m);
+
+    // Debug: verify mesh loaded
+    std::cout << "Loaded mesh: " << path << "\n";
+    std::cout << "  Vertices:  " << nVerts << "\n";
+    std::cout << "  Triangles: " << nTris << "\n";
+    std::cout << "  Grid cells: " << nCells << " ("
+              << GRID_DIMS.x << "x" << GRID_DIMS.y << "x" << GRID_DIMS.z << ")\n";
+    std::cout << "  Grid refs:  " << g.triIdx.size() << "\n";
 
     // Allocate/copy mesh array pointers
     cudaMallocCpy(verts, m.verts.data(), m.verts.size());

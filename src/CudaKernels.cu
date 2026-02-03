@@ -16,19 +16,10 @@ __global__ void resetKernel(GameState* state)
     randomizeInitialPositions(state, simIdx);
 }
 
-__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, Workspace* space)
+__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, int* debug)
 {
     int carIdx = blockIdx.x * blockDim.x + threadIdx.x;
-    int totalCars = state->sims * state->nCar;
+    if (carIdx >= state->sims * state->nCar) return;
 
-    // Reset count (single thread)
-    if (carIdx == 0) space->count = 0;
-
-    __syncthreads();
-
-    // Broad phase
-    if (carIdx < totalCars)
-    {
-        carArenaBroadPhase(state, arena, space, carIdx);
-    }
+    carArenaBroadPhase(state, arena, carIdx, debug);
 }

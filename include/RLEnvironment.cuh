@@ -14,16 +14,13 @@ private:
     ArenaMesh  m_arena;
     ArenaMesh* d_arena;
 
-    Workspace  m_space;
-    Workspace* d_space;
-
     float*     d_output;
+    int*       d_debug;
 
 public:
     int sims;
     int numB;
     int numO;
-    int cars;
     int seed;
 
     RLEnvironment(int sims, int numB, int numO, int seed);

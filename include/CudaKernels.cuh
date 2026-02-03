@@ -7,6 +7,4 @@
 
 __global__ void resetKernel(GameState* state);
 
-__global__ void carArenaNarrowPhaseKernel(GameState* state, ArenaMesh* arena, Workspace* space);
-
-__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, Workspace* space);
+__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, int* debug);
