@@ -123,59 +123,100 @@ __device__ __forceinline__ void carArenaNarrowPhase(
     float4 e1 = vec3::sub(t2, t1);
     float4 e2 = vec3::sub(t0, t2);
 
-    // Test separation on axis; returns true if separated
-    auto separated = [&](float4 axis) {
+    // Track minimum penetration axis
+    float minPen = 1e9f;
+    float4 minAxis = {0, 0, 0, 0};
+    bool separated = false;
+
+    // === Box face normals (X, Y, Z) ===
+    // X-axis
+    float triMinX = fminf(fminf(t0.x, t1.x), t2.x);
+    float triMaxX = fmaxf(fmaxf(t0.x, t1.x), t2.x);
+    float penPosX = CAR_HALF_EX.x - triMinX;  // Push in +X
+    float penNegX = triMaxX + CAR_HALF_EX.x;  // Push in -X
+    separated |= (penPosX < 0) | (penNegX < 0);
+    if (penPosX < penNegX && penPosX < minPen) { minPen = penPosX; minAxis = {1, 0, 0, 0}; }
+    if (penNegX < penPosX && penNegX < minPen) { minPen = penNegX; minAxis = {-1, 0, 0, 0}; }
+
+    // Y-axis
+    float triMinY = fminf(fminf(t0.y, t1.y), t2.y);
+    float triMaxY = fmaxf(fmaxf(t0.y, t1.y), t2.y);
+    float penPosY = CAR_HALF_EX.y - triMinY;
+    float penNegY = triMaxY + CAR_HALF_EX.y;
+    separated |= (penPosY < 0) | (penNegY < 0);
+    if (penPosY < penNegY && penPosY < minPen) { minPen = penPosY; minAxis = {0, 1, 0, 0}; }
+    if (penNegY < penPosY && penNegY < minPen) { minPen = penNegY; minAxis = {0, -1, 0, 0}; }
+
+    // Z-axis
+    float triMinZ = fminf(fminf(t0.z, t1.z), t2.z);
+    float triMaxZ = fmaxf(fmaxf(t0.z, t1.z), t2.z);
+    float penPosZ = CAR_HALF_EX.z - triMinZ;
+    float penNegZ = triMaxZ + CAR_HALF_EX.z;
+    separated |= (penPosZ < 0) | (penNegZ < 0);
+    if (penPosZ < penNegZ && penPosZ < minPen) { minPen = penPosZ; minAxis = {0, 0, 1, 0}; }
+    if (penNegZ < penPosZ && penNegZ < minPen) { minPen = penNegZ; minAxis = {0, 0, -1, 0}; }
+
+    // === Triangle face normal ===
+    float4 triNorm = vec3::cross(e0, e1);
+    float triNormLen = sqrtf(vec3::dot(triNorm, triNorm));
+    if (triNormLen > 1e-8f)
+    {
+        triNorm = vec3::mult(triNorm, 1.0f / triNormLen);
+        float p0 = vec3::dot(t0, triNorm);
+        float p1 = vec3::dot(t1, triNorm);
+        float p2 = vec3::dot(t2, triNorm);
+        float triMin = fminf(fminf(p0, p1), p2);
+        float triMax = fmaxf(fmaxf(p0, p1), p2);
+        float boxRadius = fabsf(triNorm.x) * CAR_HALF_EX.x
+                        + fabsf(triNorm.y) * CAR_HALF_EX.y
+                        + fabsf(triNorm.z) * CAR_HALF_EX.z;
+        float penPos = boxRadius - triMin;
+        float penNeg = triMax + boxRadius;
+        separated |= (penPos < 0) | (penNeg < 0);
+        if (penPos < penNeg && penPos < minPen) { minPen = penPos; minAxis = triNorm; }
+        if (penNeg < penPos && penNeg < minPen) { minPen = penNeg; minAxis = vec3::mult(triNorm, -1.0f); }
+    }
+
+    // === Cross-product axes (9 total) ===
+    float4 axes[9] = {
+        {0, -e0.z, e0.y, 0}, {0, -e1.z, e1.y, 0}, {0, -e2.z, e2.y, 0},  // X × edges
+        {e0.z, 0, -e0.x, 0}, {e1.z, 0, -e1.x, 0}, {e2.z, 0, -e2.x, 0},  // Y × edges
+        {-e0.y, e0.x, 0, 0}, {-e1.y, e1.x, 0, 0}, {-e2.y, e2.x, 0, 0}   // Z × edges
+    };
+
+    #pragma unroll
+    for (int i = 0; i < 9; ++i)
+    {
+        float4 axis = axes[i];
         float lenSq = vec3::dot(axis, axis);
-        if (lenSq < 1e-8f) return false;
+        if (lenSq < 1e-8f) continue;
+
+        float invLen = rsqrtf(lenSq);
+        axis = vec3::mult(axis, invLen);
 
         float p0 = vec3::dot(t0, axis);
         float p1 = vec3::dot(t1, axis);
         float p2 = vec3::dot(t2, axis);
         float triMin = fminf(fminf(p0, p1), p2);
         float triMax = fmaxf(fmaxf(p0, p1), p2);
-
         float boxRadius = fabsf(axis.x) * CAR_HALF_EX.x
                         + fabsf(axis.y) * CAR_HALF_EX.y
                         + fabsf(axis.z) * CAR_HALF_EX.z;
 
-        return triMin > boxRadius || triMax < -boxRadius;
-    };
+        float penPos = boxRadius - triMin;
+        float penNeg = triMax + boxRadius;
+        separated |= (penPos < 0) | (penNeg < 0);
+        if (penPos < penNeg && penPos < minPen) { minPen = penPos; minAxis = axis; }
+        if (penNeg < penPos && penNeg < minPen) { minPen = penNeg; minAxis = vec3::mult(axis, -1.0f); }
+    }
 
-    // Box face normals (axis-aligned in local space)
-    bool sepX = fminf(fminf(t0.x, t1.x), t2.x) > CAR_HALF_EX.x ||
-                fmaxf(fmaxf(t0.x, t1.x), t2.x) < -CAR_HALF_EX.x;
-    bool sepY = fminf(fminf(t0.y, t1.y), t2.y) > CAR_HALF_EX.y ||
-                fmaxf(fmaxf(t0.y, t1.y), t2.y) < -CAR_HALF_EX.y;
-    bool sepZ = fminf(fminf(t0.z, t1.z), t2.z) > CAR_HALF_EX.z ||
-                fmaxf(fmaxf(t0.z, t1.z), t2.z) < -CAR_HALF_EX.z;
-
-    // Triangle face normal
-    bool sepTri = separated(vec3::cross(e0, e1));
-
-    // Cross-product axes (box edges x triangle edges)
-    float4 boxX = {1, 0, 0, 0};
-    float4 boxY = {0, 1, 0, 0};
-    float4 boxZ = {0, 0, 1, 0};
-
-    bool sepXe0 = separated(vec3::cross(boxX, e0));
-    bool sepXe1 = separated(vec3::cross(boxX, e1));
-    bool sepXe2 = separated(vec3::cross(boxX, e2));
-    bool sepYe0 = separated(vec3::cross(boxY, e0));
-    bool sepYe1 = separated(vec3::cross(boxY, e1));
-    bool sepYe2 = separated(vec3::cross(boxY, e2));
-    bool sepZe0 = separated(vec3::cross(boxZ, e0));
-    bool sepZe1 = separated(vec3::cross(boxZ, e1));
-    bool sepZe2 = separated(vec3::cross(boxZ, e2));
-
-    bool anySeparated = sepX | sepY | sepZ | sepTri |
-                        sepXe0 | sepXe1 | sepXe2 |
-                        sepYe0 | sepYe1 | sepYe2 |
-                        sepZe0 | sepZe1 | sepZe2;
-
-    if (!anySeparated)
+    if (!separated)
     {
-        // All 13 axes show overlap - collision detected
-        // TODO: Compute contact point, normal, and penetration depth
+        // minAxis is contact normal (in car-local space), minPen is penetration depth
+        // Transform normal to world space
+        float4 worldNormal = quat::toWorld(minAxis, carRot);
+
+        // TODO: Use worldNormal and minPen for collision response
         atomicAdd(&state->cars.numTris[carIdx], 1);
     }
 }
