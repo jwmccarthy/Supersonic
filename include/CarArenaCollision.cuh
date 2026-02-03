@@ -216,11 +216,118 @@ __device__ __forceinline__ void carArenaNarrowPhase(
         if (penNeg < penPos && penNeg < minPen) { minPen = penNeg; minAxis = vec3::mult(axis, -1.0f); }
     }
 
-    if (!separated)
-    {
-        float4 worldNormal = quat::toWorld(minAxis, carRot);
+    if (separated) return;
 
-        // TODO: Use worldNormal and minPen for collision response
-        atomicAdd(&state->cars.numTris[carIdx], 1);
+    // Contact points in box-local space (max 4)
+    float4 contacts[4];
+    int numContacts = 0;
+
+    // Determine axis type: 0-5 = box faces (±X,±Y,±Z), 6 = tri face, 7+ = edge-edge
+    // minAxis already tells us the direction, check which case we're in
+    float ax = fabsf(minAxis.x), ay = fabsf(minAxis.y), az = fabsf(minAxis.z);
+
+    // Box face contact: clip triangle against box face
+    if (ax > 0.9f || ay > 0.9f || az > 0.9f)
+    {
+        // Reference face is the box face aligned with minAxis
+        // Clip triangle edges against the 4 side planes of this face
+
+        // Determine which axis is the face normal and the two perpendicular axes
+        int faceAxis = (ax > 0.9f) ? 0 : (ay > 0.9f) ? 1 : 2;
+        float faceSign = (faceAxis == 0) ? minAxis.x : (faceAxis == 1) ? minAxis.y : minAxis.z;
+        float faceD = (faceAxis == 0) ? CAR_HALF_EX.x : (faceAxis == 1) ? CAR_HALF_EX.y : CAR_HALF_EX.z;
+
+        // The two perpendicular half-extents for clipping
+        float clipEx[2], clipMin[2], clipMax[2];
+        if (faceAxis == 0) { // X face, clip against Y and Z
+            clipEx[0] = CAR_HALF_EX.y; clipEx[1] = CAR_HALF_EX.z;
+        } else if (faceAxis == 1) { // Y face, clip against X and Z
+            clipEx[0] = CAR_HALF_EX.x; clipEx[1] = CAR_HALF_EX.z;
+        } else { // Z face, clip against X and Y
+            clipEx[0] = CAR_HALF_EX.x; clipEx[1] = CAR_HALF_EX.y;
+        }
+        clipMin[0] = -clipEx[0]; clipMax[0] = clipEx[0];
+        clipMin[1] = -clipEx[1]; clipMax[1] = clipEx[1];
+
+        // Sutherland-Hodgman style clipping of triangle against 4 planes
+        // Start with triangle vertices
+        float4 poly[6] = {t0, t1, t2};
+        int polyN = 3;
+
+        // Clip against each of 4 side planes
+        for (int plane = 0; plane < 4 && polyN > 0; ++plane)
+        {
+            float4 out[6];
+            int outN = 0;
+
+            int clipIdx = plane / 2; // 0 or 1
+            float boundary = (plane & 1) ? clipMax[clipIdx] : clipMin[clipIdx];
+            float sign = (plane & 1) ? 1.0f : -1.0f;
+
+            for (int i = 0; i < polyN && outN < 6; ++i)
+            {
+                float4 curr = poly[i];
+                float4 next = poly[(i + 1) % polyN];
+
+                // Get coordinate based on face axis and clip index
+                float currC, nextC;
+                if (faceAxis == 0) { currC = (clipIdx == 0) ? curr.y : curr.z; nextC = (clipIdx == 0) ? next.y : next.z; }
+                else if (faceAxis == 1) { currC = (clipIdx == 0) ? curr.x : curr.z; nextC = (clipIdx == 0) ? next.x : next.z; }
+                else { currC = (clipIdx == 0) ? curr.x : curr.y; nextC = (clipIdx == 0) ? next.x : next.y; }
+
+                bool currIn = (sign * currC) <= (sign * boundary);
+                bool nextIn = (sign * nextC) <= (sign * boundary);
+
+                if (currIn && nextIn) {
+                    out[outN++] = next;
+                } else if (currIn && !nextIn) {
+                    float t = (boundary - currC) / (nextC - currC);
+                    out[outN++] = vec3::add(curr, vec3::mult(vec3::sub(next, curr), t));
+                } else if (!currIn && nextIn) {
+                    float t = (boundary - currC) / (nextC - currC);
+                    out[outN++] = vec3::add(curr, vec3::mult(vec3::sub(next, curr), t));
+                    out[outN++] = next;
+                }
+            }
+            polyN = outN;
+            for (int i = 0; i < polyN; ++i) poly[i] = out[i];
+        }
+
+        // Project clipped polygon onto reference face and keep points behind it
+        float refPlane = faceSign * faceD;
+        for (int i = 0; i < polyN && numContacts < 4; ++i)
+        {
+            float depth;
+            if (faceAxis == 0) depth = faceSign * (refPlane - poly[i].x * faceSign);
+            else if (faceAxis == 1) depth = faceSign * (refPlane - poly[i].y * faceSign);
+            else depth = faceSign * (refPlane - poly[i].z * faceSign);
+
+            if (depth >= 0)
+            {
+                // Project point onto face
+                float4 cp = poly[i];
+                if (faceAxis == 0) cp.x = faceSign * faceD;
+                else if (faceAxis == 1) cp.y = faceSign * faceD;
+                else cp.z = faceSign * faceD;
+                contacts[numContacts++] = cp;
+            }
+        }
     }
+    else
+    {
+        // Triangle face or edge-edge contact - use triangle centroid as single contact
+        float4 centroid = vec3::mult(vec3::add(vec3::add(t0, t1), t2), 1.0f/3.0f);
+        contacts[0] = centroid;
+        numContacts = 1;
+    }
+
+    // Transform contacts to world space and store
+    for (int i = 0; i < numContacts; ++i)
+    {
+        float4 worldContact = vec3::add(boxCenter, quat::toWorld(contacts[i], carRot));
+        // TODO: Store worldContact, worldNormal, and depth for collision response
+    }
+
+    float4 worldNormal = quat::toWorld(minAxis, carRot);
+    atomicAdd(&state->cars.numTris[carIdx], 1);
 }
