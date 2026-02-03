@@ -40,9 +40,15 @@ float* RLEnvironment::step()
     cudaDeviceSynchronize();
 
     // Debug: accumulate SAT hit stats
-    int totalPairs, satHits;
-    cudaMemcpy(&totalPairs, &d_space->count, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&satHits, &d_space->narrowHits, sizeof(int), cudaMemcpyDeviceToHost);
+    int totalPairs = -1, satHits = -1;
+    cudaError_t e1 = cudaMemcpy(&totalPairs, &d_space->count, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaError_t e2 = cudaMemcpy(&satHits, &d_space->narrowHits, sizeof(int), cudaMemcpyDeviceToHost);
+    if (debugTotalPairs == 0 && (e1 != cudaSuccess || e2 != cudaSuccess || totalPairs < 0))
+    {
+        std::cerr << "cudaMemcpy failed: e1=" << cudaGetErrorString(e1)
+                  << " e2=" << cudaGetErrorString(e2)
+                  << " totalPairs=" << totalPairs << " satHits=" << satHits << std::endl;
+    }
     debugTotalPairs += totalPairs;
     debugSatHits += satHits;
 
