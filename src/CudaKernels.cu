@@ -13,7 +13,7 @@ __global__ void resetKernel(GameState* state)
     int simIdx = blockIdx.x * blockDim.x + threadIdx.x;
     if (simIdx >= state->sims) return;
 
-    resetToKickoff(state, simIdx);
+    randomizeInitialPositions(state, simIdx);
 }
 
 // Binary search to find which car owns this thread
