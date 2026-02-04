@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 #include <cub/cub.cuh>
+#include <cstdio>
 
 #include "CudaCommon.cuh"
 #include "CudaKernels.cuh"
@@ -63,6 +64,16 @@ float* RLEnvironment::step()
     }
 
     cudaDeviceSynchronize();
+
+    // Debug: print stats every 1000 frames
+    static int frame = 0;
+    if (frame++ % 1000 == 0)
+    {
+        int hitCount;
+        cudaMemcpy(&hitCount, m_space.hitCount, sizeof(int), cudaMemcpyDeviceToHost);
+        printf("Frame %d: totalTris=%d, npBlocks=%d, hitCount=%d\n",
+               frame, totalTris, totalTris > 0 ? (totalTris + blockSize - 1) / blockSize : 0, hitCount);
+    }
 
     return d_output;
 }
