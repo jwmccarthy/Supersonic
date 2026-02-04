@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# Defaults
 SIMS=1024
 NCAR=4
 SEED=111
 ITER=10000
 
-# Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         --sims)  SIMS="$2";  shift 2 ;;
