@@ -1,18 +1,21 @@
 #include <chrono>
 #include <iostream>
+#include <cstdlib>
 #include <cuda_runtime.h>
 
 #include "RLEnvironment.cuh"
 
-int main()
+int main(int argc, char** argv)
 {
     using clock  = std::chrono::steady_clock;
     using second = std::chrono::duration<double>;
 
-    const int sims = 1024;
-    const int nCar = 4;
-    const int seed = 111;
-    const int iter = 10000;
+    int sims = (argc > 1) ? std::atoi(argv[1]) : 1024;
+    int nCar = (argc > 2) ? std::atoi(argv[2]) : 4;
+    int seed = (argc > 3) ? std::atoi(argv[3]) : 111;
+    int iter = (argc > 4) ? std::atoi(argv[4]) : 10000;
+
+    std::cout << "sims=" << sims << " nCar=" << nCar << " seed=" << seed << " iter=" << iter << "\n";
 
     RLEnvironment env{sims, nCar, nCar, seed};
 
