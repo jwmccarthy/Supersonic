@@ -57,9 +57,9 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
     }
 
     // Store for narrow phase
-    space->triCounts[carIdx] = triCount;
-    space->cellMin[carIdx] = cellMin;
-    space->cellMax[carIdx] = cellMax;
+    space->numTri[carIdx] = triCount;
+    space->cellMin[carIdx] = make_int4(cellMin.x, cellMin.y, cellMin.z, 0);
+    space->cellMax[carIdx] = make_int4(cellMax.x, cellMax.y, cellMax.z, 0);
 }
 
 // Narrow phase: one thread per (car, triangle) pair - does AABB test
@@ -77,8 +77,8 @@ __device__ __forceinline__ void carArenaNarrowPhase(
     auto [minX, minY, minZ, minW] = aabbMin;
     auto [maxX, maxY, maxZ, maxW] = aabbMax;
 
-    int3 cellMin = space->cellMin[carIdx];
-    int3 cellMax = space->cellMax[carIdx];
+    int4 cellMin = space->cellMin[carIdx];
+    int4 cellMax = space->cellMax[carIdx];
 
     // Find the triangle corresponding to localTriIdx
     int idx = 0;
@@ -166,7 +166,7 @@ __device__ __forceinline__ void carArenaNarrowPhase(
 
                 if (!separated)
                 {
-                    atomicAdd(space->hitCount, 1);
+                    atomicAdd(space->numHit, 1);
                 }
             }
             return;

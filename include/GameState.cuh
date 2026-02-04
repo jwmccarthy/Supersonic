@@ -29,11 +29,11 @@ struct REFLECT Pads
 
 struct REFLECT Workspace
 {
-    int*  hitCount;    // Debug: total AABB hits
-    int*  triCounts;   // Per-car triangle counts (from overlapping cells)
-    int*  triOffsets;  // Prefix sum of triCounts for thread mapping
-    int3* cellMin;     // Per-car cell bounds
-    int3* cellMax;
+    int*  numHit;   // Debug: total AABB hits
+    int*  numTri;   // Per-car triangle counts (from overlapping cells)
+    int*  triOff;   // Prefix sum of triCounts for thread mapping
+    int4* cellMin;  // Per-car cell bounds (w unused, for alignment)
+    int4* cellMax;
 };
 
 struct GameState

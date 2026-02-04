@@ -15,7 +15,7 @@ constexpr size_t CUB_TEMP_BYTES = 1 << 20;  // 1MB
 RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     : sims(sims), numB(numB), numO(numO), seed(seed)
     , cars(sims * (numB + numO))
-    , cubTempBytes(CUB_TEMP_BYTES)
+    , cubBytes(CUB_TEMP_BYTES)
     , m_arena(MESH_PATH)
     , m_state(sims, numB, numO, seed)
 {
@@ -28,7 +28,7 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     cudaMallocCpy(d_space, &m_space);
 
     // Allocate CUB temp storage
-    CUDA_CHECK(cudaMalloc(&d_cubTemp, cubTempBytes));
+    CUDA_CHECK(cudaMalloc(&d_cubBuf, cubBytes));
 
     // Allocate output buffer
     CUDA_CHECK(cudaMalloc(&d_output, sizeof(float)));
@@ -40,19 +40,17 @@ float* RLEnvironment::step()
     int gridSize = (cars + blockSize - 1) / blockSize;
 
     // Reset hit counter
-    cudaMemsetAsync(m_space.hitCount, 0, sizeof(int));
+    cudaMemsetAsync(m_space.numHit, 0, sizeof(int));
 
     // Broad phase - compute cell bounds and triangle counts per car
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
 
     // Prefix sum to get offsets for thread mapping
-    cub::DeviceScan::ExclusiveSum(
-        d_cubTemp, cubTempBytes,
-        m_space.triCounts, m_space.triOffsets, cars + 1);
+    cub::DeviceScan::ExclusiveSum(d_cubBuf, cubBytes, m_space.numTri, m_space.triOff, cars + 1);
 
     // Get total triangles (last element of prefix sum)
     int totalTris;
-    cudaMemcpy(&totalTris, m_space.triOffsets + cars, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&totalTris, m_space.triOff + cars, sizeof(int), cudaMemcpyDeviceToHost);
 
     // Narrow phase - one thread per (car, triangle) pair
     if (totalTris > 0)
@@ -69,7 +67,7 @@ float* RLEnvironment::step()
     if (frame++ % 1000 == 0)
     {
         int hitCount;
-        cudaMemcpy(&hitCount, m_space.hitCount, sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&hitCount, m_space.numHit, sizeof(int), cudaMemcpyDeviceToHost);
         printf("Frame %d: totalTris=%d, npBlocks=%d, hitCount=%d\n",
                frame, totalTris, totalTris > 0 ? (totalTris + blockSize - 1) / blockSize : 0, hitCount);
     }

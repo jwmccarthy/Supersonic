@@ -8,19 +8,22 @@
 class RLEnvironment
 {
 private:
+    // Game physics state
     GameState  m_state;
     GameState* d_state;
 
+    // Static arena mesh
     ArenaMesh  m_arena;
     ArenaMesh* d_arena;
 
+    // Intermediate outputs
     Workspace  m_space;
     Workspace* d_space;
 
-    void*      d_cubTemp;
-    size_t     cubTempBytes;
-
-    float*     d_output;
+    // Buffers
+    void*  d_cubBuf;
+    size_t cubBytes;
+    float* d_output;
 
 public:
     int sims;

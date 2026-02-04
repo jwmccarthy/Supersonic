@@ -42,8 +42,8 @@ __global__ void carArenaNarrowPhaseKernel(
     if (tid >= totalTris) return;
 
     // Find which car this thread belongs to
-    int carIdx = findCarIdx(space->triOffsets, totalCars, tid);
-    int localTriIdx = tid - space->triOffsets[carIdx];
+    int carIdx = findCarIdx(space->triOff, totalCars, tid);
+    int localTriIdx = tid - space->triOff[carIdx];
 
     carArenaNarrowPhase(state, arena, space, carIdx, localTriIdx);
 }
