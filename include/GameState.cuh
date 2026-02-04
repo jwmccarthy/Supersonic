@@ -29,9 +29,8 @@ struct REFLECT Pads
 
 struct REFLECT Workspace
 {
-    int*  numPairs;  // Number of car-triangle pairs for narrow phase
-    int*  blockCnt;  // For grid sync in tail launch
-    int2* pairs;     // Array of (carIdx, triIdx) pairs
+    int*  counts;    // Per-car pair counts
+    int2* pairs;     // Pre-allocated slots: pairs[carIdx * MAX_PAIRS_PER_CAR + i]
 };
 
 struct GameState

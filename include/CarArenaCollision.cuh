@@ -51,6 +51,10 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
     auto [minX, minY, minZ, minW] = aabbMin;
     auto [maxX, maxY, maxZ, maxW] = aabbMax;
 
+    // Pre-allocated slot base for this car
+    int slotBase = carIdx * MAX_PAIRS_PER_CAR;
+    int count = 0;
+
     for (int x = cellMin.x; x <= cellMax.x; ++x)
     for (int y = cellMin.y; y <= cellMax.y; ++y)
     for (int z = cellMin.z; z <= cellMax.z; ++z)
@@ -76,11 +80,12 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
                 minZ <= triMax.z && maxZ >= triMin.z
             );
 
-            if (hit)
+            if (hit && count < MAX_PAIRS_PER_CAR)
             {
-                int pairIdx = atomicAdd(space->numPairs, 1);
-                space->pairs[pairIdx] = make_int2(carIdx, triIdx);
+                space->pairs[slotBase + count++] = make_int2(carIdx, triIdx);
             }
         }
     }
+
+    space->counts[carIdx] = count;
 }

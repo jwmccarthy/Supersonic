@@ -17,8 +17,8 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     cudaMallocCpy(d_arena, &m_arena);
     cudaMallocCpy(d_state, &m_state);
 
-    // Allocate collision workspace
-    cudaMallocSOA(m_space, {1, 1, cars * MAX_PAIRS_PER_CAR});
+    // Allocate collision workspace (counts per car, pre-allocated pair slots)
+    cudaMallocSOA(m_space, {cars, cars * MAX_PAIRS_PER_CAR});
     cudaMallocCpy(d_space, &m_space);
 
     // Allocate output buffer
