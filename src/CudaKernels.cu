@@ -41,22 +41,22 @@ __global__ void carArenaCollisionKernel(
         carArenaBroadPhase(state, arena, space, carIdx);
     }
 
-    __syncthreads();
+    // __syncthreads();
 
-    if (blockIdx.x == 0 && threadIdx.x == 0)
-    {
-        int nPairs = *space->numPairs;
+    // if (blockIdx.x == 0 && threadIdx.x == 0)
+    // {
+    //     int nPairs = *space->numPairs;
         
-        if (nPairs > 0)
-        {
-            int blockSize = 128;
-            int gridSize = (nPairs + blockSize - 1) / blockSize;
+    //     if (nPairs > 0)
+    //     {
+    //         int blockSize = 128;
+    //         int gridSize = (nPairs + blockSize - 1) / blockSize;
 
-            carArenaNarrowPhaseKernel<<<gridSize, blockSize>>>(state, arena, space);
-        }
+    //         carArenaNarrowPhaseKernel<<<gridSize, blockSize>>>(state, arena, space);
+    //     }
 
-        // Reset counters for next invocation
-        *space->blockCnt = 0;
-        *space->numPairs = 0;
-    }
+    //     // Reset counters for next invocation
+    //     *space->blockCnt = 0;
+    //     *space->numPairs = 0;
+    // }
 }
