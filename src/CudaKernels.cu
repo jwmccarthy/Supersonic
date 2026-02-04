@@ -43,16 +43,7 @@ __global__ void carArenaCollisionKernel(
 
     __syncthreads();
 
-    // Last block tail-launches narrow phase
-    __shared__ int lastBlock;
-
-    if (threadIdx.x == 0)
-    {
-        lastBlock = atomicAdd(space->blockCnt, 1) == (gridDim.x - 1);
-    }
-    __syncthreads();
-
-    if (lastBlock && threadIdx.x == 0)
+    if (blockIdx.x == 0 && threadIdx.x == 0)
     {
         int nPairs = *space->numPairs;
         

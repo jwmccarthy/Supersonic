@@ -12,7 +12,7 @@ int main()
     const int sims = 1024;
     const int nCar = 4;
     const int seed = 123;
-    const int iter = 100;
+    const int iter = 10000;
 
     RLEnvironment env{sims, nCar, nCar, seed};
 
