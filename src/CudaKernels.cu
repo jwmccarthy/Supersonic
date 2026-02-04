@@ -23,10 +23,15 @@ __device__ int findCarIdx(int* triOffsets, int totalCars, int threadIdx)
     while (lo < hi)
     {
         int mid = (lo + hi) / 2;
+        
         if (triOffsets[mid + 1] <= threadIdx)
+        {
             lo = mid + 1;
+        }
         else
+        {
             hi = mid;
+        }
     }
     return lo;
 }
