@@ -80,10 +80,12 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
                 minZ <= triMax.z && maxZ >= triMin.z
             );
 
-            if (hit && count < MAX_PAIRS_PER_CAR)
-            {
-                space->pairs[slotBase + count++] = make_int2(carIdx, triIdx);
-            }
+            count += hit;
+
+            // if (hit && count < MAX_PAIRS_PER_CAR)
+            // {
+            //     space->pairs[slotBase + count++] = make_int2(carIdx, triIdx);
+            // }
         }
     }
 
