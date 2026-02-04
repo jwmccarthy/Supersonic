@@ -6,7 +6,7 @@ find_package(CUDAToolkit REQUIRED)
 if(CUDAToolkit_VERSION VERSION_LESS "12.8")
     message(WARNING "CUDA ${CUDAToolkit_VERSION} detected. Blackwell (RTX 50 series) requires CUDA 12.8+")
 endif()
-set(CMAKE_CUDA_ARCHITECTURES "89;120")
+set(CMAKE_CUDA_ARCHITECTURES "86;89;120")
 
 # Reflection plugin
 add_subdirectory(plugin)
