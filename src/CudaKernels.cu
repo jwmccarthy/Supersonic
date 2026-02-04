@@ -35,13 +35,13 @@ __global__ void carArenaNarrowPhaseKernel(
     GameState* state,
     ArenaMesh* arena,
     Workspace* space,
-    int totalCars,
     int totalTris)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= totalTris) return;
 
     // Find which car this thread belongs to
+    int totalCars = state->sims * state->nCar;
     int carIdx = findCarIdx(space->triOff, totalCars, tid);
     int localTriIdx = tid - space->triOff[carIdx];
 

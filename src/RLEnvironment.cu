@@ -49,27 +49,23 @@ float* RLEnvironment::step()
     cub::DeviceScan::ExclusiveSum(d_cubBuf, cubBytes, m_space.numTri, m_space.triOff, cars + 1);
 
     // Get total triangles (last element of prefix sum)
-    int totalTris;
-    cudaMemcpy(&totalTris, m_space.triOff + cars, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&m_tris, m_space.triOff + cars, sizeof(int), cudaMemcpyDeviceToHost);
 
     // Narrow phase - one thread per (car, triangle) pair
-    if (totalTris > 0)
+    if (m_tris > 0)
     {
-        int npBlocks = (totalTris + blockSize - 1) / blockSize;
-        carArenaNarrowPhaseKernel<<<npBlocks, blockSize>>>(
-            d_state, d_arena, d_space, cars, totalTris);
+        gridSize = (m_tris + blockSize - 1) / blockSize;
+        carArenaNarrowPhaseKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space, m_tris);
     }
 
     cudaDeviceSynchronize();
 
     // Debug: print stats every 1000 frames
     static int frame = 0;
-    if (frame++ % 1000 == 0)
+    if (++frame % 1000 == 0)
     {
-        int hitCount;
-        cudaMemcpy(&hitCount, m_space.numHit, sizeof(int), cudaMemcpyDeviceToHost);
-        printf("Frame %d: totalTris=%d, npBlocks=%d, hitCount=%d\n",
-               frame, totalTris, totalTris > 0 ? (totalTris + blockSize - 1) / blockSize : 0, hitCount);
+        cudaMemcpy(&m_nHit, m_space.numHit, sizeof(int), cudaMemcpyDeviceToHost);
+        printf("Frame %d: tris=%d hits=%d\n", frame, m_tris, m_nHit);
     }
 
     return d_output;

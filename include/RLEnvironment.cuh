@@ -25,6 +25,10 @@ private:
     size_t cubBytes;
     float* d_output;
 
+    // Temp vars
+    int m_tris;
+    int m_nHit;  // Debug
+
 public:
     int sims;
     int cars;
