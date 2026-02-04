@@ -40,6 +40,10 @@ float* RLEnvironment::step()
     int blockSize = 256;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
+    // Randomize car positions each step for realistic profiling
+    int resetBlocks = (sims + 31) / 32;
+    resetKernel<<<resetBlocks, 32>>>(d_state);
+
     // Reset hit counter
     cudaMemsetAsync(m_space.hitCount, 0, sizeof(int));
 
