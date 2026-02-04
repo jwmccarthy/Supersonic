@@ -16,10 +16,56 @@ __global__ void resetKernel(GameState* state)
     randomizeInitialPositions(state, simIdx);
 }
 
-__global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, int* debug)
+__global__ void carArenaNarrowPhaseKernel(
+    GameState* state,
+    ArenaMesh* arena,
+    Workspace* space)
+{
+    int pairIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (pairIdx >= *space->numPairs) return;
+
+    // TODO: Implement narrow phase collision detection
+}
+
+__global__ void carArenaCollisionKernel(
+    GameState* state,
+    ArenaMesh* arena,
+    Workspace* space)
 {
     int carIdx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (carIdx >= state->sims * state->nCar) return;
+    int totalCars = state->sims * state->nCar;
 
-    carArenaBroadPhase(state, arena, carIdx, debug);
+    // Broad phase
+    if (carIdx < totalCars)
+    {
+        carArenaBroadPhase(state, arena, space, carIdx);
+    }
+
+    __syncthreads();
+
+    // Last block tail-launches narrow phase
+    __shared__ int lastBlock;
+
+    if (threadIdx.x == 0)
+    {
+        lastBlock = atomicAdd(space->blockCnt, 1) == (gridDim.x - 1);
+    }
+    __syncthreads();
+
+    if (lastBlock && threadIdx.x == 0)
+    {
+        int nPairs = *space->numPairs;
+        
+        if (nPairs > 0)
+        {
+            int blockSize = 128;
+            int gridSize = (nPairs + blockSize - 1) / blockSize;
+
+            carArenaNarrowPhaseKernel<<<gridSize, blockSize>>>(state, arena, space);
+        }
+
+        // Reset counters for next invocation
+        *space->blockCnt = 0;
+        *space->numPairs = 0;
+    }
 }

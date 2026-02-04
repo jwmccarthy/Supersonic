@@ -35,7 +35,7 @@ __device__ __forceinline__ AABB getCarAABB(ArenaMesh* arena, float4 pos, float4 
     return { aabbMin, aabbMax };
 }
 
-__device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* arena, int carIdx, int* debug)
+__device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* arena, Workspace* space, int carIdx)
 {
     // Cached access of car state
     float4 pos = __ldg(&state->cars.position[carIdx]);
@@ -47,8 +47,6 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
     // Get bound grid cell indices
     int3 cellMin = arena->getCellIdx(aabbMin);
     int3 cellMax = arena->getCellIdx(aabbMax);
-
-    int overlaps = 0;
 
     auto [minX, minY, minZ, minW] = aabbMin;
     auto [maxX, maxY, maxZ, maxW] = aabbMax;
@@ -72,19 +70,17 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
             float4 triMax = __ldg(&arena->aabbMax[triIdx]);
 
             // Test AABB overlap
-            overlaps += (
+            bool hit = (
                 minX <= triMax.x && maxX >= triMin.x &&
                 minY <= triMax.y && maxY >= triMin.y &&
                 minZ <= triMax.z && maxZ >= triMin.z
             );
+
+            if (hit)
+            {
+                int pairIdx = atomicAdd(space->numPairs, 1);
+                space->pairs[pairIdx] = make_int2(carIdx, triIdx);
+            }
         }
     }
-
-    int lane = threadIdx.x & 31;  
-
-    #pragma unroll                                                    
-    for (int offset = 16; offset > 0; offset >>= 1)                   
-        overlaps += __shfl_down_sync(0xffffffff, overlaps, offset);   
-                                                                      
-    if (lane == 0) atomicAdd(debug, overlaps);     
 }

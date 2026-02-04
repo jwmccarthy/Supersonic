@@ -75,6 +75,9 @@ __host__ __device__ constexpr float4 WORLD_X = { 1, 0, 0, 0 };
 __host__ __device__ constexpr float4 WORLD_Y = { 0, 1, 0, 0 };
 __host__ __device__ constexpr float4 WORLD_Z = { 0, 0, 1, 0 };
 
+// Collision workspace
+__host__ __device__ constexpr int MAX_PAIRS_PER_CAR = 64;
+
 // Arena grid & extents
 __host__ __device__ constexpr int3   GRID_DIMS = { 48, 48, 16 };
 __host__ __device__ constexpr float4 ARENA_MIN = { -6000.f, -4108.f,  -14.f, 0.f };

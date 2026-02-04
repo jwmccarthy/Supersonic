@@ -27,12 +27,19 @@ struct REFLECT Pads
     bool* isActive;
 };
 
+struct REFLECT Workspace
+{
+    int*  numPairs;     // Number of car-triangle pairs for narrow phase
+    int*  blockCnt;     // For grid sync in tail launch
+    int2* pairs;        // Array of (carIdx, triIdx) pairs
+};
+
 struct GameState
 {
     int sims;  // # of simulations
-    int nCar;  // # of cars total
     int numB;  // # of blue cars
     int numO;  // # of orange cars
+    int nCar;  // # of cars total
     int seed;  // For pseudo-RNG
 
     Ball ball{};
