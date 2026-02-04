@@ -19,7 +19,7 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     cudaMallocCpy(d_arena, &m_arena);
     cudaMallocCpy(d_state, &m_state);
 
-    // Allocate collision workspace (hitCount, triCounts, triOffsets, cellMin, cellMax)
+    // Allocate collision workspace
     cudaMallocSOA(m_space, {1, cars, cars + 1, cars, cars});
     cudaMallocCpy(d_space, &m_space);
 
@@ -40,26 +40,22 @@ float* RLEnvironment::step()
     int blockSize = 256;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
-    // Randomize car positions each step for realistic profiling
-    int resetBlocks = (sims + 31) / 32;
-    resetKernel<<<resetBlocks, 32>>>(d_state);
-
     // Reset hit counter
     cudaMemsetAsync(m_space.hitCount, 0, sizeof(int));
 
-    // 1. Broad phase - compute cell bounds and triangle counts per car
+    // Broad phase - compute cell bounds and triangle counts per car
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
 
-    // 2. Prefix sum to get offsets for thread mapping
+    // Prefix sum to get offsets for thread mapping
     cub::DeviceScan::ExclusiveSum(
         d_cubTemp, cubTempBytes,
         m_space.triCounts, m_space.triOffsets, cars + 1);
 
-    // 3. Get total triangles (last element of prefix sum)
+    // Get total triangles (last element of prefix sum)
     int totalTris;
     cudaMemcpy(&totalTris, m_space.triOffsets + cars, sizeof(int), cudaMemcpyDeviceToHost);
 
-    // 4. Narrow phase - one thread per (car, triangle) pair
+    // Narrow phase - one thread per (car, triangle) pair
     if (totalTris > 0)
     {
         int npBlocks = (totalTris + blockSize - 1) / blockSize;
