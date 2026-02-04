@@ -1,6 +1,5 @@
 #include <cuda_runtime.h>
-#include <thrust/device_ptr.h>
-#include <thrust/scan.h>
+#include <cub/cub.cuh>
 #include <cstdio>
 
 #include "CudaCommon.cuh"
@@ -10,9 +9,13 @@
 #include "RLEnvironment.cuh"
 #include "StructAllocate.cuh"
 
+// Fixed temp buffer size for CUB scan (generous, avoids query overhead)
+constexpr size_t CUB_TEMP_BYTES = 1 << 20;  // 1MB
+
 RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     : sims(sims), numB(numB), numO(numO), seed(seed)
     , cars(sims * (numB + numO))
+    , cubTempBytes(CUB_TEMP_BYTES)
     , m_arena(MESH_PATH)
     , m_state(sims, numB, numO, seed)
 {
@@ -23,6 +26,9 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     // Allocate collision workspace
     cudaMallocSOA(m_space, {1, cars, cars + 1, cars, cars});
     cudaMallocCpy(d_space, &m_space);
+
+    // Allocate CUB temp storage
+    CUDA_CHECK(cudaMalloc(&d_cubTemp, cubTempBytes));
 
     // Allocate output buffer
     CUDA_CHECK(cudaMalloc(&d_output, sizeof(float)));
@@ -40,9 +46,9 @@ float* RLEnvironment::step()
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
 
     // Prefix sum to get offsets for thread mapping
-    thrust::device_ptr<int> counts(m_space.triCounts);
-    thrust::device_ptr<int> offsets(m_space.triOffsets);
-    thrust::exclusive_scan(counts, counts + cars + 1, offsets);
+    cub::DeviceScan::ExclusiveSum(
+        d_cubTemp, cubTempBytes,
+        m_space.triCounts, m_space.triOffsets, cars + 1);
 
     // Get total triangles (last element of prefix sum)
     int totalTris;
