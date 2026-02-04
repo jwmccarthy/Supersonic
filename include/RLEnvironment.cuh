@@ -17,8 +17,6 @@ private:
     Workspace  m_space;
     Workspace* d_space;
 
-    void*      d_cubTemp;
-    size_t     cubTempBytes;
     float*     d_output;
 
 public:

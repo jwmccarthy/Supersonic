@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
-#include <cub/cub.cuh>
+#include <thrust/device_ptr.h>
+#include <thrust/scan.h>
 #include <cstdio>
 
 #include "CudaCommon.cuh"
@@ -23,14 +24,6 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     cudaMallocSOA(m_space, {1, cars, cars + 1, cars, cars});
     cudaMallocCpy(d_space, &m_space);
 
-    // Allocate CUB temp storage for prefix sum
-    d_cubTemp = nullptr;
-    cubTempBytes = 0;
-    cub::DeviceScan::ExclusiveSum(
-        d_cubTemp, cubTempBytes,
-        m_space.triCounts, m_space.triOffsets, cars + 1);
-    CUDA_CHECK(cudaMalloc(&d_cubTemp, cubTempBytes));
-
     // Allocate output buffer
     CUDA_CHECK(cudaMalloc(&d_output, sizeof(float)));
 }
@@ -47,9 +40,9 @@ float* RLEnvironment::step()
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
 
     // Prefix sum to get offsets for thread mapping
-    cub::DeviceScan::ExclusiveSum(
-        d_cubTemp, cubTempBytes,
-        m_space.triCounts, m_space.triOffsets, cars + 1);
+    thrust::device_ptr<int> counts(m_space.triCounts);
+    thrust::device_ptr<int> offsets(m_space.triOffsets);
+    thrust::exclusive_scan(counts, counts + cars + 1, offsets);
 
     // Get total triangles (last element of prefix sum)
     int totalTris;
