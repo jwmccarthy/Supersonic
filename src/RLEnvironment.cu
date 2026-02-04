@@ -17,8 +17,8 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     cudaMallocCpy(d_arena, &m_arena);
     cudaMallocCpy(d_state, &m_state);
 
-    // Allocate collision workspace (triCounts, triOffsets, cellMin, cellMax)
-    cudaMallocSOA(m_space, {cars, cars + 1, cars, cars});
+    // Allocate collision workspace (hitCount, triCounts, triOffsets, cellMin, cellMax)
+    cudaMallocSOA(m_space, {1, cars, cars + 1, cars, cars});
     cudaMallocCpy(d_space, &m_space);
 
     // Allocate totalTris counter
@@ -32,6 +32,9 @@ float* RLEnvironment::step()
 {
     int blockSize = 256;
     int gridSize = (cars + blockSize - 1) / blockSize;
+
+    // Reset hit counter
+    cudaMemsetAsync(m_space.hitCount, 0, sizeof(int));
 
     // 1. Broad phase - compute cell bounds and triangle counts per car
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space, d_totalTris);

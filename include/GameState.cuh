@@ -29,6 +29,7 @@ struct REFLECT Pads
 
 struct REFLECT Workspace
 {
+    int*  hitCount;    // Debug: total AABB hits
     int*  triCounts;   // Per-car triangle counts (from overlapping cells)
     int*  triOffsets;  // Prefix sum of triCounts for thread mapping
     int3* cellMin;     // Per-car cell bounds

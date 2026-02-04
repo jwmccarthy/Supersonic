@@ -108,7 +108,7 @@ __device__ __forceinline__ void carArenaNarrowPhase(
 
             if (hit)
             {
-                // TODO: Do actual narrow phase collision
+                atomicAdd(space->hitCount, 1);
             }
             return;
         }
