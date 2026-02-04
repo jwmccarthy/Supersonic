@@ -1,4 +1,5 @@
 #include <cuda_runtime.h>
+#include <cub/cub.cuh>
 
 #include "CudaCommon.cuh"
 #include "CudaKernels.cuh"
@@ -21,8 +22,13 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     cudaMallocSOA(m_space, {1, cars, cars + 1, cars, cars});
     cudaMallocCpy(d_space, &m_space);
 
-    // Allocate totalTris counter
-    CUDA_CHECK(cudaMalloc(&d_totalTris, sizeof(int)));
+    // Allocate CUB temp storage for prefix sum
+    d_cubTemp = nullptr;
+    cubTempBytes = 0;
+    cub::DeviceScan::ExclusiveSum(
+        d_cubTemp, cubTempBytes,
+        m_space.triCounts, m_space.triOffsets, cars + 1);
+    CUDA_CHECK(cudaMalloc(&d_cubTemp, cubTempBytes));
 
     // Allocate output buffer
     CUDA_CHECK(cudaMalloc(&d_output, sizeof(float)));
@@ -37,15 +43,16 @@ float* RLEnvironment::step()
     cudaMemsetAsync(m_space.hitCount, 0, sizeof(int));
 
     // 1. Broad phase - compute cell bounds and triangle counts per car
-    carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space, d_totalTris);
+    carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
 
     // 2. Prefix sum to get offsets for thread mapping
-    prefixSumKernel<<<1, cars, cars * sizeof(int)>>>(
-        m_space.triCounts, m_space.triOffsets, cars, d_totalTris);
+    cub::DeviceScan::ExclusiveSum(
+        d_cubTemp, cubTempBytes,
+        m_space.triCounts, m_space.triOffsets, cars + 1);
 
-    // 3. Get total triangles to launch
+    // 3. Get total triangles (last element of prefix sum)
     int totalTris;
-    cudaMemcpy(&totalTris, d_totalTris, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&totalTris, m_space.triOffsets + cars, sizeof(int), cudaMemcpyDeviceToHost);
 
     // 4. Narrow phase - one thread per (car, triangle) pair
     if (totalTris > 0)
