@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Install dependencies
 apt-get update
 apt-get install -y \
     build-essential \
@@ -9,8 +8,6 @@ apt-get install -y \
     clang \
     libclang-dev
 
-# Create build directory
-mkdir -p build
+mkdir -p build && ./build.sh
 
-# Run build
-./build.sh
+chmod +x ./run.sh

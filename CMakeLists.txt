@@ -34,7 +34,7 @@ add_custom_target(reflection DEPENDS "${REFLECTION_HEADER}")
 file(GLOB CUDA_SOURCES "${CMAKE_SOURCE_DIR}/src/*.cu")
 
 # Main executable
-add_executable(supersonic profile.cu ${CUDA_SOURCES})
+add_executable(supersonic main.cu ${CUDA_SOURCES})
 add_dependencies(supersonic reflection)
 
 target_include_directories(supersonic PRIVATE
