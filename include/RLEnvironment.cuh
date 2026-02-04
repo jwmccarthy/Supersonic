@@ -17,6 +17,7 @@ private:
     Workspace  m_space;
     Workspace* d_space;
 
+    int*       d_totalTris;
     float*     d_output;
 
 public:

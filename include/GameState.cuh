@@ -29,8 +29,10 @@ struct REFLECT Pads
 
 struct REFLECT Workspace
 {
-    int*  counts;    // Per-car pair counts
-    int2* pairs;     // Pre-allocated slots: pairs[carIdx * MAX_PAIRS_PER_CAR + i]
+    int*  triCounts;   // Per-car triangle counts (from overlapping cells)
+    int*  triOffsets;  // Prefix sum of triCounts for thread mapping
+    int3* cellMin;     // Per-car cell bounds
+    int3* cellMax;
 };
 
 struct GameState
