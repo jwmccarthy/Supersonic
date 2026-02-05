@@ -12,16 +12,14 @@ __host__ __device__ __forceinline__ float sign(float x)
     return (x >= 0.0f) ? 1.0f : -1.0f;
 }
 
-template<typename T>
-__host__ __device__ __forceinline__ T min(T a, T b)
+__host__ __device__ __forceinline__ int3 min(int3 a, int3 b)
 {
-    return a < b ? a : b;
+    return { ::min(a.x, b.x), ::min(a.y, b.y), ::min(a.z, b.z) };
 }
 
-template<typename T>
-__host__ __device__ __forceinline__ T max(T a, T b)
+__host__ __device__ __forceinline__ int3 max(int3 a, int3 b)
 {
-    return a > b ? a : b;
+    return { ::max(a.x, b.x), ::max(a.y, b.y), ::max(a.z, b.z) };
 }
 
 namespace vec3
@@ -44,16 +42,60 @@ namespace vec3
         return { a.x / b.x, a.y / b.y, a.z / b.z };
     }
 
+    template<typename T, typename S>
+    __host__ __device__ __forceinline__ T add(T v, S s)
+    {
+        return { v.x + s, v.y + s, v.z + s };
+    }
+
+    template<typename T, typename S>
+    __host__ __device__ __forceinline__ T sub(T v, S s)
+    {
+        return { v.x - s, v.y - s, v.z - s };
+    }
+
+    template<typename T, typename S>
+    __host__ __device__ __forceinline__ T div(T v, S s)
+    {
+        return { v.x / s, v.y / s, v.z / s };
+    }
+
+    template<typename T, typename S>
+    __host__ __device__ __forceinline__ T mult(T v, S s)
+    {
+        return { v.x * s, v.y * s, v.z * s };
+    }
+
     template<typename T>
     __host__ __device__ __forceinline__ T min(T a, T b)
     {
-        return { ::min(a.x, b.x), ::min(a.y, b.y), ::min(a.z, b.z) };
+        return { fminf(a.x, b.x), fminf(a.y, b.y), fminf(a.z, b.z) };
     }
 
     template<typename T>
     __host__ __device__ __forceinline__ T max(T a, T b)
     {
+        return { fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z) };
+    }
+
+    __host__ __device__ __forceinline__ int3 min(int3 a, int3 b)
+    {
+        return { ::min(a.x, b.x), ::min(a.y, b.y), ::min(a.z, b.z) };
+    }
+
+    __host__ __device__ __forceinline__ int3 max(int3 a, int3 b)
+    {
         return { ::max(a.x, b.x), ::max(a.y, b.y), ::max(a.z, b.z) };
+    }
+
+    __host__ __device__ __forceinline__ int3 add(int3 v, int s)
+    {
+        return { v.x + s, v.y + s, v.z + s };
+    }
+
+    __host__ __device__ __forceinline__ int3 sub(int3 v, int s)
+    {
+        return { v.x - s, v.y - s, v.z - s };
     }
 
     template<typename T>
@@ -90,12 +132,6 @@ namespace vec3
     __host__ __device__ __forceinline__ bool lte(T a, T b)
     {
         return a.x <= b.x && a.y <= b.y && a.z <= b.z;
-    }
-
-    template<typename T, typename S>
-    __host__ __device__ __forceinline__ T mult(T v, S s)
-    {
-        return { v.x * s, v.y * s, v.z * s };
     }
 
     template<typename T>
@@ -151,13 +187,13 @@ namespace vec4
     template<typename T>
     __host__ __device__ __forceinline__ T min(T a, T b)
     {
-        return { ::min(a.x, b.x), ::min(a.y, b.y), ::min(a.z, b.z), ::min(a.w, b.w) };
+        return { fminf(a.x, b.x), fminf(a.y, b.y), fminf(a.z, b.z), fminf(a.w, b.w) };
     }
 
     template<typename T>
     __host__ __device__ __forceinline__ T max(T a, T b)
     {
-        return { ::max(a.x, b.x), ::max(a.y, b.y), ::max(a.z, b.z), ::max(a.w, b.w) };
+        return { fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z), fmaxf(a.w, b.w) };
     }
 
     template<typename T>
