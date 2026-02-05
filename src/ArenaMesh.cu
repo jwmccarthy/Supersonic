@@ -97,8 +97,8 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
         int3 lo = vec3::min(vec3::min(cX, cY), cZ);
         int3 hi = vec3::max(vec3::max(cX, cY), cZ);
 
-        // Convert cell bounds to overlapping 2x2x2 group bounds
-        int3 gLo = max({0, 0, 0}, vec3::sub(lo, 1));
+        // Convert cell bounds to overlapping group bounds
+        int3 gLo = max({0, 0, 0}, vec3::sub(lo, vec3::sub(GROUP_SPAN, 1)));
         int3 gHi = min(hi, vec3::sub(GROUP_DIMS, 1));
 
         // Iterate over potential groups
@@ -163,8 +163,12 @@ void ArenaMesh::printMeshInfo(const char* path, const Grid& g)
     std::cout << "  Vertices:  " << nVerts << "\n";
     std::cout << "  Triangles: " << nTris << "\n";
     std::cout << "  Grid groups: " << nGroups << " ("
-              << GROUP_DIMS.x << "x" 
-              << GROUP_DIMS.y << "x" 
+              << GROUP_DIMS.x << "x"
+              << GROUP_DIMS.y << "x"
               << GROUP_DIMS.z << ")\n";
-    std::cout << "  Grid refs:  " << g.triIdx.size() << "\n";
+    std::cout << "  Group span:  "
+              << GROUP_SPAN.x << "x" 
+              << GROUP_SPAN.y << "x" 
+              << GROUP_SPAN.z << "\n";
+    std::cout << "  Grid refs:   " << g.triIdx.size() << "\n";
 }

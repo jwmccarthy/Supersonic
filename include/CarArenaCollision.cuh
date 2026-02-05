@@ -47,7 +47,7 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
     int3 groupIdx = arena->getGroupIdx(cellMin);
     int groupFlat = arena->flatGroupIdx(groupIdx.x, groupIdx.y, groupIdx.z);
 
-    // Count total triangles in the overlapping 2x2x2 group
+    // Count total triangles in the overlapping group
     int triCount = __ldg(&arena->triPre[groupFlat + 1]) - __ldg(&arena->triPre[groupFlat]);
 
     // Store for narrow phase

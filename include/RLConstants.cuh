@@ -70,6 +70,31 @@ __host__ __device__ constexpr float4 CAR_EXTENTS = { 120.507f, 86.6994f,  38.659
 __host__ __device__ constexpr float4 CAR_HALF_EX = { 60.2535f, 43.3497f, 19.32955f, 0.0f };
 __host__ __device__ constexpr float4 CAR_OFFSETS = { 13.8757f,     0.0f,   20.755f, 0.0f };
 
+__host__ __device__ constexpr float sqrtConst(float x)
+{
+    if (x <= 0.0f) return 0.0f;
+    float r = x;
+    for (int i = 0; i < 8; ++i)
+    {
+        r = 0.5f * (r + x / r);
+    }
+    return r;
+}
+
+__host__ __device__ constexpr int ceilDivPos(float num, float den)
+{
+    float q = num / den;
+    int qi = (int)q;
+    return (q > (float)qi) ? qi + 1 : qi;
+}
+
+// Max possible AABB length along any world axis for a rotated car
+__host__ __device__ constexpr float CAR_AABB_MAX =
+    2.0f * sqrtConst(
+        CAR_HALF_EX.x * CAR_HALF_EX.x +
+        CAR_HALF_EX.y * CAR_HALF_EX.y +
+        CAR_HALF_EX.z * CAR_HALF_EX.z);
+
 // World axis helpers
 __host__ __device__ constexpr float4 WORLD_X = { 1, 0, 0, 0 };
 __host__ __device__ constexpr float4 WORLD_Y = { 0, 1, 0, 0 };
@@ -84,10 +109,21 @@ __host__ __device__ constexpr float4 ARENA_MAX = {  6000.f,  4108.f, 2076.f, 0.f
 
 // Arena grid
 __host__ __device__ constexpr int3   GRID_DIMS = { 48, 48, 12 };
-__host__ __device__ constexpr int3   GROUP_DIMS = { GRID_DIMS.x - 1, GRID_DIMS.y - 1, GRID_DIMS.z - 1 };
 __host__ __device__ constexpr float4 CELL_SIZE = {
     (ARENA_MAX.x - ARENA_MIN.x) / (float)GRID_DIMS.x,
     (ARENA_MAX.y - ARENA_MIN.y) / (float)GRID_DIMS.y,
     (ARENA_MAX.z - ARENA_MIN.z) / (float)GRID_DIMS.z,
     0.f
+};
+// Group span in cells to fully contain a car AABB
+__host__ __device__ constexpr int3 GROUP_SPAN = {
+    ceilDivPos(CAR_AABB_MAX, CELL_SIZE.x) + 1,
+    ceilDivPos(CAR_AABB_MAX, CELL_SIZE.y) + 1,
+    ceilDivPos(CAR_AABB_MAX, CELL_SIZE.z) + 1
+};
+// Number of overlapping groups along each axis (stride 1)
+__host__ __device__ constexpr int3 GROUP_DIMS = {
+    GRID_DIMS.x - (GROUP_SPAN.x - 1),
+    GRID_DIMS.y - (GROUP_SPAN.y - 1),
+    GRID_DIMS.z - (GROUP_SPAN.z - 1)
 };

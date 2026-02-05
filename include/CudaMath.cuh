@@ -7,9 +7,56 @@
 #define rsqrtf(x) (1.0f / sqrtf(x))
 #endif
 
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+
 __host__ __device__ __forceinline__ float sign(float x)
 {
     return (x >= 0.0f) ? 1.0f : -1.0f;
+}
+
+__host__ __device__ __forceinline__ int min(int a, int b)
+{
+    return a < b ? a : b;
+}
+
+__host__ __device__ __forceinline__ int max(int a, int b)
+{
+    return a > b ? a : b;
+}
+
+__host__ __device__ __forceinline__ unsigned int min(unsigned int a, unsigned int b)
+{
+    return a < b ? a : b;
+}
+
+__host__ __device__ __forceinline__ unsigned int max(unsigned int a, unsigned int b)
+{
+    return a > b ? a : b;
+}
+
+__host__ __device__ __forceinline__ float min(float a, float b)
+{
+    return a < b ? a : b;
+}
+
+__host__ __device__ __forceinline__ float max(float a, float b)
+{
+    return a > b ? a : b;
+}
+
+__host__ __device__ __forceinline__ double min(double a, double b)
+{
+    return a < b ? a : b;
+}
+
+__host__ __device__ __forceinline__ double max(double a, double b)
+{
+    return a > b ? a : b;
 }
 
 __host__ __device__ __forceinline__ int3 min(int3 a, int3 b)
