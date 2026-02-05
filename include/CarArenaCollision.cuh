@@ -89,8 +89,8 @@ __device__ __forceinline__ void carArenaNarrowPhase(
             minZ <= triMax.z && maxZ >= triMin.z
         );
 
-        if (hit)
-        {
+        // if (hit)
+        // {
             // SAT: OBB vs Triangle (13 axes)
             // Load triangle vertices via index buffer
             int4 tri = arena->tris[triIdx];
@@ -137,20 +137,28 @@ __device__ __forceinline__ void carArenaNarrowPhase(
             };
 
             // 3 box face normals
-            testAxis(bX); testAxis(bY); testAxis(bZ);
+            testAxis(bX);
+            testAxis(bY);
+            testAxis(bZ);
 
             // 1 triangle normal
-            if (!separated) testAxis(triN);
+            testAxis(triN);
 
             // 9 edge cross products
-            if (!separated) { testAxis(vec3::cross(bX, e0)); testAxis(vec3::cross(bX, e1)); testAxis(vec3::cross(bX, e2)); }
-            if (!separated) { testAxis(vec3::cross(bY, e0)); testAxis(vec3::cross(bY, e1)); testAxis(vec3::cross(bY, e2)); }
-            if (!separated) { testAxis(vec3::cross(bZ, e0)); testAxis(vec3::cross(bZ, e1)); testAxis(vec3::cross(bZ, e2)); }
+            testAxis(vec3::cross(bX, e0));
+            testAxis(vec3::cross(bX, e1));
+            testAxis(vec3::cross(bX, e2));
+            testAxis(vec3::cross(bY, e0));
+            testAxis(vec3::cross(bY, e1));
+            testAxis(vec3::cross(bY, e2));
+            testAxis(vec3::cross(bZ, e0));
+            testAxis(vec3::cross(bZ, e1));
+            testAxis(vec3::cross(bZ, e2));
 
             if (!separated)
             {
                 atomicAdd(space->numHit, 1);
             }
-        }
+        // }
     }
 }
