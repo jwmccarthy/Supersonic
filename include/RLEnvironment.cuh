@@ -26,9 +26,9 @@ private:
     float* d_output;
 
     // Temp vars
-    int m_broadTris;   // Total tris from broad phase (before AABB filter)
-    int m_narrowTris;  // Total tris after AABB filter
-    int m_maxBroad;    // Max allocation size for AABB filter arrays
+    int m_broadTris;   // Total tris from broad phase
+    int m_narrowTris;  // Total tris after AABB filter (from warp compaction)
+    int m_maxBroad;    // Max allocation size for compact arrays
     int m_nHit;        // Debug
 
 public:

@@ -30,12 +30,10 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
 
     // Allocate collision workspace
     // Fields: numHit(1), numTri(cars), triOff(cars+1), groupIdx(cars),
-    //         carAABBMin(cars), carAABBMax(cars),
-    //         aabbFlag(maxBroad), aabbOff(maxBroad+1),
+    //         carAABBMin(cars), carAABBMax(cars), narrowCount(1),
     //         compactCarIdx(maxBroad), compactTriIdx(maxBroad)
     cudaMallocSOA(m_space, {1, cars, cars + 1, cars,
-                           cars, cars,
-                           m_maxBroad, m_maxBroad + 1,
+                           cars, cars, 1,
                            m_maxBroad, m_maxBroad});
     cudaMallocCpy(d_space, &m_space);
 
@@ -51,8 +49,9 @@ float* RLEnvironment::step()
     int blockSize = 256;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
-    // Reset hit counter
+    // Reset counters
     cudaMemsetAsync(m_space.numHit, 0, sizeof(int));
+    cudaMemsetAsync(m_space.narrowCount, 0, sizeof(int));
 
     // Broad phase - compute group bounds, triangle counts, and car AABBs
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
@@ -65,21 +64,15 @@ float* RLEnvironment::step()
 
     if (m_broadTris > 0)
     {
-        // AABB filter phase - test car AABB vs triangle AABB
+        // Warp-level AABB filter + compaction (single kernel, one atomic per warp)
         gridSize = (m_broadTris + blockSize - 1) / blockSize;
-        carArenaAABBFilterKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space, m_broadTris);
+        carArenaFilterCompactKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space, m_broadTris);
 
-        // Prefix sum on AABB flags for compaction
-        cub::DeviceScan::ExclusiveSum(d_cubBuf, cubBytes, m_space.aabbFlag, m_space.aabbOff, m_broadTris + 1);
-
-        // Get total AABB-overlapping triangles
-        cudaMemcpy(&m_narrowTris, m_space.aabbOff + m_broadTris, sizeof(int), cudaMemcpyDeviceToHost);
+        // Get total AABB-overlapping triangles from atomic counter
+        cudaMemcpy(&m_narrowTris, m_space.narrowCount, sizeof(int), cudaMemcpyDeviceToHost);
 
         if (m_narrowTris > 0)
         {
-            // Compaction phase - write surviving (carIdx, triIdx) pairs
-            carArenaCompactKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space, m_broadTris);
-
             // Narrow phase - full SAT test on AABB-overlapping triangles only
             gridSize = (m_narrowTris + blockSize - 1) / blockSize;
             carArenaNarrowPhaseKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space, m_narrowTris);

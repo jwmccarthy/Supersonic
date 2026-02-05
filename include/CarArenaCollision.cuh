@@ -50,65 +50,11 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
     // Count total triangles in the overlapping group
     int triCount = __ldg(&arena->triPre[groupFlat + 1]) - __ldg(&arena->triPre[groupFlat]);
 
-    // Store for AABB filter and narrow phase
+    // Store for narrow phase
     space->numTri[carIdx] = triCount;
     space->groupIdx[carIdx] = make_int4(groupIdx.x, groupIdx.y, groupIdx.z, 0);
     space->carAABBMin[carIdx] = aabbMin;
     space->carAABBMax[carIdx] = aabbMax;
-}
-
-// AABB filter phase: test car AABB vs triangle AABB, write flag
-__device__ __forceinline__ void carArenaAABBFilter(
-    ArenaMesh* arena,
-    Workspace* space,
-    int carIdx,
-    int localTriIdx,
-    int tid)
-{
-    int4 groupIdx = space->groupIdx[carIdx];
-    int groupFlat = arena->flatGroupIdx(groupIdx.x, groupIdx.y, groupIdx.z);
-    int triBeg = __ldg(&arena->triPre[groupFlat]);
-
-    int t = triBeg + localTriIdx;
-    int triIdx = __ldg(&arena->triIdx[t]);
-
-    // Load car AABB
-    float4 carMin = space->carAABBMin[carIdx];
-    float4 carMax = space->carAABBMax[carIdx];
-
-    // Load triangle AABB
-    float4 triMin = __ldg(&arena->aabbMin[triIdx]);
-    float4 triMax = __ldg(&arena->aabbMax[triIdx]);
-
-    // AABB overlap test
-    bool overlap = (carMin.x <= triMax.x && carMax.x >= triMin.x) &&
-                   (carMin.y <= triMax.y && carMax.y >= triMin.y) &&
-                   (carMin.z <= triMax.z && carMax.z >= triMin.z);
-
-    space->aabbFlag[tid] = overlap ? 1 : 0;
-}
-
-// Compaction phase: write surviving (carIdx, triIdx) pairs
-__device__ __forceinline__ void carArenaCompact(
-    ArenaMesh* arena,
-    Workspace* space,
-    int carIdx,
-    int localTriIdx,
-    int tid)
-{
-    if (space->aabbFlag[tid])
-    {
-        int4 groupIdx = space->groupIdx[carIdx];
-        int groupFlat = arena->flatGroupIdx(groupIdx.x, groupIdx.y, groupIdx.z);
-        int triBeg = __ldg(&arena->triPre[groupFlat]);
-
-        int t = triBeg + localTriIdx;
-        int triIdx = __ldg(&arena->triIdx[t]);
-
-        int outIdx = space->aabbOff[tid];
-        space->compactCarIdx[outIdx] = carIdx;
-        space->compactTriIdx[outIdx] = triIdx;
-    }
 }
 
 // Narrow phase: one thread per AABB-overlapping (car, triangle) pair - does full SAT
