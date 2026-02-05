@@ -12,6 +12,100 @@ struct AABB
     float4 max;
 };
 
+struct SatContext
+{
+    float4 bX;
+    float4 bY;
+    float4 bZ;
+    float4 center;
+    float4 v0;
+    float4 v1;
+    float4 v2;
+};
+
+struct SatResult
+{
+    bool   hit;
+    float  minPen;
+    int    axisIdx;
+    float4 axisN;
+};
+
+__device__ __forceinline__ void satTestAxis(
+    const SatContext& ctx,
+    float4 axis,
+    int axisIdx,
+    bool& separated,
+    float& minPen,
+    int& minAxisIdx,
+    float4& minAxisN)
+{
+    float len2 = vec3::dot(axis, axis);
+    if (len2 < 1e-8f) return;
+
+    float invLen = rsqrtf(len2);
+    float4 axisN = vec3::mult(axis, invLen);
+
+    // Box projection radius
+    float boxR = fabsf(vec3::dot(ctx.bX, axis)) * CAR_HALF_EX.x +
+                 fabsf(vec3::dot(ctx.bY, axis)) * CAR_HALF_EX.y +
+                 fabsf(vec3::dot(ctx.bZ, axis)) * CAR_HALF_EX.z;
+
+    // Triangle vertex projections relative to box center
+    float d0 = vec3::dot(vec3::sub(ctx.v0, ctx.center), axis);
+    float d1 = vec3::dot(vec3::sub(ctx.v1, ctx.center), axis);
+    float d2 = vec3::dot(vec3::sub(ctx.v2, ctx.center), axis);
+
+    float triMin = fminf(fminf(d0, d1), d2);
+    float triMax = fmaxf(fmaxf(d0, d1), d2);
+
+    if (triMin > boxR || triMax < -boxR)
+    {
+        separated = true;
+        return;
+    }
+
+    // Overlap along normalized axis
+    float overlap = fminf(boxR - triMin, triMax + boxR);
+    float pen = overlap * invLen;
+    if (pen < minPen)
+    {
+        minPen = pen;
+        minAxisIdx = axisIdx;
+        minAxisN = axisN;
+    }
+}
+
+__device__ __forceinline__ SatResult satOBBvsTri(
+    const SatContext& ctx,
+    float4 e0,
+    float4 e1,
+    float4 e2,
+    float4 triN)
+{
+    bool separated = false;
+    float minPen = 1e30f;
+    int minAxisIdx = -1;
+    float4 minAxisN = { 0, 0, 0, 0 };
+
+    satTestAxis(ctx, ctx.bX, 0, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, ctx.bY, 1, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, ctx.bZ, 2, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, triN, 3, separated, minPen, minAxisIdx, minAxisN);
+
+    satTestAxis(ctx, vec3::cross(ctx.bX, e0), 4, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, vec3::cross(ctx.bX, e1), 5, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, vec3::cross(ctx.bX, e2), 6, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, vec3::cross(ctx.bY, e0), 7, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, vec3::cross(ctx.bY, e1), 8, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, vec3::cross(ctx.bY, e2), 9, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, vec3::cross(ctx.bZ, e0), 10, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, vec3::cross(ctx.bZ, e1), 11, separated, minPen, minAxisIdx, minAxisN);
+    satTestAxis(ctx, vec3::cross(ctx.bZ, e2), 12, separated, minPen, minAxisIdx, minAxisN);
+
+    return { !separated, minPen, minAxisIdx, minAxisN };
+}
+
 __device__ __forceinline__ AABB getCarAABB(ArenaMesh* arena, float4 pos, float4 rot)
 {
     float4 aabbMin = ARENA_MAX;
@@ -76,9 +170,6 @@ __device__ __forceinline__ void carArenaNarrowPhase(
         int t = triBeg + localTriIdx;
         int triIdx = __ldg(&arena->triIdx[t]);
 
-        float4 triMin = __ldg(&arena->aabbMin[triIdx]);
-        float4 triMax = __ldg(&arena->aabbMax[triIdx]);
-
         // SAT: OBB vs Triangle (13 axes)
         // Load triangle vertices via index buffer
         int4 tri = arena->tris[triIdx];
@@ -100,50 +191,13 @@ __device__ __forceinline__ void carArenaNarrowPhase(
         // Box center
         float4 center = vec3::add(pos, quat::toWorld(CAR_OFFSETS, rot));
 
-        // Test all 13 potential separating axes
-        bool separated = false;
+        SatContext ctx = { bX, bY, bZ, center, v0, v1, v2 };
+        SatResult sat = satOBBvsTri(ctx, e0, e1, e2, triN);
+        (void)sat.minPen;
+        (void)sat.axisIdx;
+        (void)sat.axisN;
 
-        // Helper: test one axis
-        auto testAxis = [&](float4 axis) {
-            float len2 = vec3::dot(axis, axis);
-            if (len2 < 1e-8f) return;
-
-            // Box projection radius
-            float boxR = fabsf(vec3::dot(bX, axis)) * CAR_HALF_EX.x +
-                            fabsf(vec3::dot(bY, axis)) * CAR_HALF_EX.y +
-                            fabsf(vec3::dot(bZ, axis)) * CAR_HALF_EX.z;
-
-            // Triangle vertex projections relative to box center
-            float d0 = vec3::dot(vec3::sub(v0, center), axis);
-            float d1 = vec3::dot(vec3::sub(v1, center), axis);
-            float d2 = vec3::dot(vec3::sub(v2, center), axis);
-
-            float triMin = fminf(fminf(d0, d1), d2);
-            float triMax = fmaxf(fmaxf(d0, d1), d2);
-
-            if (triMin > boxR || triMax < -boxR) separated = true;
-        };
-
-        // 3 box face normals
-        testAxis(bX);
-        testAxis(bY);
-        testAxis(bZ);
-
-        // 1 triangle normal
-        testAxis(triN);
-
-        // 9 edge cross products
-        testAxis(vec3::cross(bX, e0));
-        testAxis(vec3::cross(bX, e1));
-        testAxis(vec3::cross(bX, e2));
-        testAxis(vec3::cross(bY, e0));
-        testAxis(vec3::cross(bY, e1));
-        testAxis(vec3::cross(bY, e2));
-        testAxis(vec3::cross(bZ, e0));
-        testAxis(vec3::cross(bZ, e1));
-        testAxis(vec3::cross(bZ, e2));
-
-        if (!separated)
+        if (sat.hit)
         {
             atomicAdd(space->numHit, 1);
         }
