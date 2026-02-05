@@ -98,12 +98,8 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
         int3 hi = vec3::max(vec3::max(cX, cY), cZ);
 
         // Convert cell bounds to overlapping 2x2x2 group bounds
-        int3 gLo = { max(0, lo.x - 1), max(0, lo.y - 1), max(0, lo.z - 1) };
-        int3 gHi = {
-            min(hi.x, GROUP_DIMS.x - 1),
-            min(hi.y, GROUP_DIMS.y - 1),
-            min(hi.z, GROUP_DIMS.z - 1)
-        };
+        int3 gLo = max({0, 0, 0}, vec3::sub(lo, 1));
+        int3 gHi = min(hi, vec3::sub(GROUP_DIMS, 1));
 
         // Iterate over potential groups
         for (int x = gLo.x; x <= gHi.x; ++x)
@@ -144,13 +140,7 @@ ArenaMesh::ArenaMesh(const char* path)
     Mesh m = loadMeshObj(path);
     Grid g = buildBroadphaseGrid(m);
 
-    // Debug: verify mesh loaded
-    std::cout << "Loaded mesh: " << path << "\n";
-    std::cout << "  Vertices:  " << nVerts << "\n";
-    std::cout << "  Triangles: " << nTris << "\n";
-    std::cout << "  Grid groups: " << nGroups << " ("
-              << GROUP_DIMS.x << "x" << GROUP_DIMS.y << "x" << GROUP_DIMS.z << ")\n";
-    std::cout << "  Grid refs:  " << g.triIdx.size() << "\n";
+    printMeshInfo(path, g);
 
     // Allocate/copy mesh array pointers
     cudaMallocCpy(verts, m.verts.data(), m.verts.size());
@@ -164,4 +154,17 @@ ArenaMesh::ArenaMesh(const char* path)
     // Allocate/copy grid array pointers
     cudaMallocCpy(triIdx, g.triIdx.data(), g.triIdx.size());
     cudaMallocCpy(triPre, g.triPre.data(), g.triPre.size());
+}
+
+void ArenaMesh::printMeshInfo(const char* path, const Grid& g)
+{
+    // Debug: verify mesh loaded
+    std::cout << "Loaded mesh: " << path << "\n";
+    std::cout << "  Vertices:  " << nVerts << "\n";
+    std::cout << "  Triangles: " << nTris << "\n";
+    std::cout << "  Grid groups: " << nGroups << " ("
+              << GROUP_DIMS.x << "x" 
+              << GROUP_DIMS.y << "x" 
+              << GROUP_DIMS.z << ")\n";
+    std::cout << "  Grid refs:  " << g.triIdx.size() << "\n";
 }

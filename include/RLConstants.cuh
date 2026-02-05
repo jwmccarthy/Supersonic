@@ -78,14 +78,16 @@ __host__ __device__ constexpr float4 WORLD_Z = { 0, 0, 1, 0 };
 // Collision workspace
 __host__ __device__ constexpr int MAX_PAIRS_PER_CAR = 64;
 
-// Arena grid & extents
+// Arena grid
 __host__ __device__ constexpr int3   GRID_DIMS = { 48, 48, 12 };
 __host__ __device__ constexpr int3   GROUP_DIMS = { GRID_DIMS.x - 1, GRID_DIMS.y - 1, GRID_DIMS.z - 1 };
-__host__ __device__ constexpr float4 ARENA_MIN = { -6000.f, -4108.f,  -14.f, 0.f };
-__host__ __device__ constexpr float4 ARENA_MAX = {  6000.f,  4108.f, 2076.f, 0.f };
 __host__ __device__ constexpr float4 CELL_SIZE = {
     (ARENA_MAX.x - ARENA_MIN.x) / (float)GRID_DIMS.x,
     (ARENA_MAX.y - ARENA_MIN.y) / (float)GRID_DIMS.y,
     (ARENA_MAX.z - ARENA_MIN.z) / (float)GRID_DIMS.z,
     0.f
 };
+
+// Arena extents
+__host__ __device__ constexpr float4 ARENA_MIN = { -6000.f, -4108.f,  -14.f, 0.f };
+__host__ __device__ constexpr float4 ARENA_MAX = {  6000.f,  4108.f, 2076.f, 0.f };

@@ -46,7 +46,7 @@ struct ArenaMesh
     // Device mesh arrays
     float4* verts;
     float4* norms;
-    int4* tris;
+    int4*   tris;
 
     // Tri bounding boxes
     float4* aabbMin;
@@ -61,6 +61,7 @@ struct ArenaMesh
     // Mesh & grid construction
     Mesh loadMeshObj(const char* path);
     Grid buildBroadphaseGrid(Mesh& m);
+    void printMeshInfo(const char* path, const Grid& g);
 
     // Indexing helpers
     __host__ __device__ __forceinline__ int3 getCellIdx(float4 p)
