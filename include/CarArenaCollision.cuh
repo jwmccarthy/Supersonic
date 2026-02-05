@@ -66,10 +66,6 @@ __device__ __forceinline__ void carArenaNarrowPhase(
     float4 pos = __ldg(&state->cars.position[carIdx]);
     float4 rot = __ldg(&state->cars.rotation[carIdx]);
 
-    auto [aabbMin, aabbMax] = getCarAABB(arena, pos, rot);
-    auto [minX, minY, minZ, minW] = aabbMin;
-    auto [maxX, maxY, maxZ, maxW] = aabbMax;
-
     int4 groupIdx = space->groupIdx[carIdx];
     int groupFlat = arena->flatGroupIdx(groupIdx.x, groupIdx.y, groupIdx.z);
     int triBeg = __ldg(&arena->triPre[groupFlat]);
@@ -83,82 +79,73 @@ __device__ __forceinline__ void carArenaNarrowPhase(
         float4 triMin = __ldg(&arena->aabbMin[triIdx]);
         float4 triMax = __ldg(&arena->aabbMax[triIdx]);
 
-        bool hit = (
-            minX <= triMax.x && maxX >= triMin.x &&
-            minY <= triMax.y && maxY >= triMin.y &&
-            minZ <= triMax.z && maxZ >= triMin.z
-        );
+        // SAT: OBB vs Triangle (13 axes)
+        // Load triangle vertices via index buffer
+        int4 tri = arena->tris[triIdx];
+        float4 v0 = arena->verts[tri.x];
+        float4 v1 = arena->verts[tri.y];
+        float4 v2 = arena->verts[tri.z];
 
-        // if (hit)
-        // {
-            // SAT: OBB vs Triangle (13 axes)
-            // Load triangle vertices via index buffer
-            int4 tri = arena->tris[triIdx];
-            float4 v0 = arena->verts[tri.x];
-            float4 v1 = arena->verts[tri.y];
-            float4 v2 = arena->verts[tri.z];
+        // Triangle edges and normal
+        float4 e0 = vec3::sub(v1, v0);
+        float4 e1 = vec3::sub(v2, v1);
+        float4 e2 = vec3::sub(v0, v2);
+        float4 triN = vec3::cross(e0, e1);
 
-            // Triangle edges and normal
-            float4 e0 = vec3::sub(v1, v0);
-            float4 e1 = vec3::sub(v2, v1);
-            float4 e2 = vec3::sub(v0, v2);
-            float4 triN = vec3::cross(e0, e1);
+        // Box axes in world space
+        float4 bX = quat::toWorld(WORLD_X, rot);
+        float4 bY = quat::toWorld(WORLD_Y, rot);
+        float4 bZ = quat::toWorld(WORLD_Z, rot);
 
-            // Box axes in world space
-            float4 bX = quat::toWorld(WORLD_X, rot);
-            float4 bY = quat::toWorld(WORLD_Y, rot);
-            float4 bZ = quat::toWorld(WORLD_Z, rot);
+        // Box center
+        float4 center = vec3::add(pos, quat::toWorld(CAR_OFFSETS, rot));
 
-            // Box center
-            float4 center = vec3::add(pos, quat::toWorld(CAR_OFFSETS, rot));
+        // Test all 13 potential separating axes
+        bool separated = false;
 
-            // Test all 13 potential separating axes
-            bool separated = false;
+        // Helper: test one axis
+        auto testAxis = [&](float4 axis) {
+            float len2 = vec3::dot(axis, axis);
+            if (len2 < 1e-8f) return;
 
-            // Helper: test one axis
-            auto testAxis = [&](float4 axis) {
-                float len2 = vec3::dot(axis, axis);
-                if (len2 < 1e-8f) return;
+            // Box projection radius
+            float boxR = fabsf(vec3::dot(bX, axis)) * CAR_HALF_EX.x +
+                            fabsf(vec3::dot(bY, axis)) * CAR_HALF_EX.y +
+                            fabsf(vec3::dot(bZ, axis)) * CAR_HALF_EX.z;
 
-                // Box projection radius
-                float boxR = fabsf(vec3::dot(bX, axis)) * CAR_HALF_EX.x +
-                             fabsf(vec3::dot(bY, axis)) * CAR_HALF_EX.y +
-                             fabsf(vec3::dot(bZ, axis)) * CAR_HALF_EX.z;
+            // Triangle vertex projections relative to box center
+            float d0 = vec3::dot(vec3::sub(v0, center), axis);
+            float d1 = vec3::dot(vec3::sub(v1, center), axis);
+            float d2 = vec3::dot(vec3::sub(v2, center), axis);
 
-                // Triangle vertex projections relative to box center
-                float d0 = vec3::dot(vec3::sub(v0, center), axis);
-                float d1 = vec3::dot(vec3::sub(v1, center), axis);
-                float d2 = vec3::dot(vec3::sub(v2, center), axis);
+            float triMin = fminf(fminf(d0, d1), d2);
+            float triMax = fmaxf(fmaxf(d0, d1), d2);
 
-                float triMin = fminf(fminf(d0, d1), d2);
-                float triMax = fmaxf(fmaxf(d0, d1), d2);
+            if (triMin > boxR || triMax < -boxR) separated = true;
+        };
 
-                if (triMin > boxR || triMax < -boxR) separated = true;
-            };
+        // 3 box face normals
+        testAxis(bX);
+        testAxis(bY);
+        testAxis(bZ);
 
-            // 3 box face normals
-            testAxis(bX);
-            testAxis(bY);
-            testAxis(bZ);
+        // 1 triangle normal
+        testAxis(triN);
 
-            // 1 triangle normal
-            testAxis(triN);
+        // 9 edge cross products
+        testAxis(vec3::cross(bX, e0));
+        testAxis(vec3::cross(bX, e1));
+        testAxis(vec3::cross(bX, e2));
+        testAxis(vec3::cross(bY, e0));
+        testAxis(vec3::cross(bY, e1));
+        testAxis(vec3::cross(bY, e2));
+        testAxis(vec3::cross(bZ, e0));
+        testAxis(vec3::cross(bZ, e1));
+        testAxis(vec3::cross(bZ, e2));
 
-            // 9 edge cross products
-            testAxis(vec3::cross(bX, e0));
-            testAxis(vec3::cross(bX, e1));
-            testAxis(vec3::cross(bX, e2));
-            testAxis(vec3::cross(bY, e0));
-            testAxis(vec3::cross(bY, e1));
-            testAxis(vec3::cross(bY, e2));
-            testAxis(vec3::cross(bZ, e0));
-            testAxis(vec3::cross(bZ, e1));
-            testAxis(vec3::cross(bZ, e2));
-
-            if (!separated)
-            {
-                atomicAdd(space->numHit, 1);
-            }
-        // }
+        if (!separated)
+        {
+            atomicAdd(space->numHit, 1);
+        }
     }
 }
