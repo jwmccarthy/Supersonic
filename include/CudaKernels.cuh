@@ -9,4 +9,8 @@ __global__ void resetKernel(GameState* state);
 
 __global__ void carArenaCollisionKernel(GameState* state, ArenaMesh* arena, Workspace* space);
 
-__global__ void carArenaNarrowPhaseKernel(GameState* state, ArenaMesh* arena, Workspace* space, int totalTris);
+__global__ void carArenaAABBFilterKernel(GameState* state, ArenaMesh* arena, Workspace* space, int totalBroadTris);
+
+__global__ void carArenaCompactKernel(GameState* state, ArenaMesh* arena, Workspace* space, int totalBroadTris);
+
+__global__ void carArenaNarrowPhaseKernel(GameState* state, ArenaMesh* arena, Workspace* space, int totalNarrowTris);

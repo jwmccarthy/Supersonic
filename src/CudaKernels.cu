@@ -36,21 +36,51 @@ __device__ int findCarIdx(int* triOffsets, int totalCars, int threadIdx)
     return lo;
 }
 
-__global__ void carArenaNarrowPhaseKernel(
+// AABB filter kernel: test car AABB vs triangle AABB
+__global__ void carArenaAABBFilterKernel(
     GameState* state,
     ArenaMesh* arena,
     Workspace* space,
-    int totalTris)
+    int totalBroadTris)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= totalTris) return;
+    if (tid >= totalBroadTris) return;
 
-    // Find which car this thread belongs to
     int totalCars = state->sims * state->nCar;
     int carIdx = findCarIdx(space->triOff, totalCars, tid);
     int localTriIdx = tid - space->triOff[carIdx];
 
-    carArenaNarrowPhase(state, arena, space, carIdx, localTriIdx);
+    carArenaAABBFilter(arena, space, carIdx, localTriIdx, tid);
+}
+
+// Compaction kernel: write surviving (carIdx, triIdx) pairs
+__global__ void carArenaCompactKernel(
+    GameState* state,
+    ArenaMesh* arena,
+    Workspace* space,
+    int totalBroadTris)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= totalBroadTris) return;
+
+    int totalCars = state->sims * state->nCar;
+    int carIdx = findCarIdx(space->triOff, totalCars, tid);
+    int localTriIdx = tid - space->triOff[carIdx];
+
+    carArenaCompact(arena, space, carIdx, localTriIdx, tid);
+}
+
+// Narrow phase kernel: full SAT test on AABB-overlapping triangles only
+__global__ void carArenaNarrowPhaseKernel(
+    GameState* state,
+    ArenaMesh* arena,
+    Workspace* space,
+    int totalNarrowTris)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= totalNarrowTris) return;
+
+    carArenaNarrowPhase(state, arena, space, tid);
 }
 
 __global__ void carArenaCollisionKernel(

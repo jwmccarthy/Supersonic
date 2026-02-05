@@ -26,8 +26,10 @@ private:
     float* d_output;
 
     // Temp vars
-    int m_tris;
-    int m_nHit;  // Debug
+    int m_broadTris;   // Total tris from broad phase (before AABB filter)
+    int m_narrowTris;  // Total tris after AABB filter
+    int m_maxBroad;    // Max allocation size for AABB filter arrays
+    int m_nHit;        // Debug
 
 public:
     int sims;

@@ -35,7 +35,7 @@ __device__ __forceinline__ AABB getCarAABB(ArenaMesh* arena, float4 pos, float4 
     return { aabbMin, aabbMax };
 }
 
-// Broad phase: compute group bounds and count triangles
+// Broad phase: compute group bounds, count triangles, and store car AABB
 __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* arena, Workspace* space, int carIdx)
 {
     float4 pos = __ldg(&state->cars.position[carIdx]);
@@ -50,102 +50,145 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
     // Count total triangles in the overlapping group
     int triCount = __ldg(&arena->triPre[groupFlat + 1]) - __ldg(&arena->triPre[groupFlat]);
 
-    // Store for narrow phase
+    // Store for AABB filter and narrow phase
     space->numTri[carIdx] = triCount;
     space->groupIdx[carIdx] = make_int4(groupIdx.x, groupIdx.y, groupIdx.z, 0);
+    space->carAABBMin[carIdx] = aabbMin;
+    space->carAABBMax[carIdx] = aabbMax;
 }
 
-// Narrow phase: one thread per (car, triangle) pair - does AABB test
+// AABB filter phase: test car AABB vs triangle AABB, write flag
+__device__ __forceinline__ void carArenaAABBFilter(
+    ArenaMesh* arena,
+    Workspace* space,
+    int carIdx,
+    int localTriIdx,
+    int tid)
+{
+    int4 groupIdx = space->groupIdx[carIdx];
+    int groupFlat = arena->flatGroupIdx(groupIdx.x, groupIdx.y, groupIdx.z);
+    int triBeg = __ldg(&arena->triPre[groupFlat]);
+
+    int t = triBeg + localTriIdx;
+    int triIdx = __ldg(&arena->triIdx[t]);
+
+    // Load car AABB
+    float4 carMin = space->carAABBMin[carIdx];
+    float4 carMax = space->carAABBMax[carIdx];
+
+    // Load triangle AABB
+    float4 triMin = __ldg(&arena->aabbMin[triIdx]);
+    float4 triMax = __ldg(&arena->aabbMax[triIdx]);
+
+    // AABB overlap test
+    bool overlap = (carMin.x <= triMax.x && carMax.x >= triMin.x) &&
+                   (carMin.y <= triMax.y && carMax.y >= triMin.y) &&
+                   (carMin.z <= triMax.z && carMax.z >= triMin.z);
+
+    space->aabbFlag[tid] = overlap ? 1 : 0;
+}
+
+// Compaction phase: write surviving (carIdx, triIdx) pairs
+__device__ __forceinline__ void carArenaCompact(
+    ArenaMesh* arena,
+    Workspace* space,
+    int carIdx,
+    int localTriIdx,
+    int tid)
+{
+    if (space->aabbFlag[tid])
+    {
+        int4 groupIdx = space->groupIdx[carIdx];
+        int groupFlat = arena->flatGroupIdx(groupIdx.x, groupIdx.y, groupIdx.z);
+        int triBeg = __ldg(&arena->triPre[groupFlat]);
+
+        int t = triBeg + localTriIdx;
+        int triIdx = __ldg(&arena->triIdx[t]);
+
+        int outIdx = space->aabbOff[tid];
+        space->compactCarIdx[outIdx] = carIdx;
+        space->compactTriIdx[outIdx] = triIdx;
+    }
+}
+
+// Narrow phase: one thread per AABB-overlapping (car, triangle) pair - does full SAT
 __device__ __forceinline__ void carArenaNarrowPhase(
     GameState* state,
     ArenaMesh* arena,
     Workspace* space,
-    int carIdx,
-    int localTriIdx)
+    int tid)
 {
+    int carIdx = space->compactCarIdx[tid];
+    int triIdx = space->compactTriIdx[tid];
+
     float4 pos = __ldg(&state->cars.position[carIdx]);
     float4 rot = __ldg(&state->cars.rotation[carIdx]);
 
-    int4 groupIdx = space->groupIdx[carIdx];
-    int groupFlat = arena->flatGroupIdx(groupIdx.x, groupIdx.y, groupIdx.z);
-    int triBeg = __ldg(&arena->triPre[groupFlat]);
-    int triEnd = __ldg(&arena->triPre[groupFlat + 1]);
+    // Load triangle vertices
+    int4 tri = arena->tris[triIdx];
+    float4 v0 = arena->verts[tri.x];
+    float4 v1 = arena->verts[tri.y];
+    float4 v2 = arena->verts[tri.z];
 
-    if (localTriIdx < triEnd - triBeg)
+    // Triangle edges and normal
+    float4 e0 = vec3::sub(v1, v0);
+    float4 e1 = vec3::sub(v2, v1);
+    float4 e2 = vec3::sub(v0, v2);
+    float4 triN = vec3::cross(e0, e1);
+
+    // Box axes in world space
+    float4 bX = quat::toWorld(WORLD_X, rot);
+    float4 bY = quat::toWorld(WORLD_Y, rot);
+    float4 bZ = quat::toWorld(WORLD_Z, rot);
+
+    // Box center
+    float4 center = vec3::add(pos, quat::toWorld(CAR_OFFSETS, rot));
+
+    // Test all 13 potential separating axes
+    bool separated = false;
+
+    // Helper: test one axis
+    auto testAxis = [&](float4 axis) {
+        float len2 = vec3::dot(axis, axis);
+        if (len2 < 1e-8f) return;
+
+        // Box projection radius
+        float boxR = fabsf(vec3::dot(bX, axis)) * CAR_HALF_EX.x +
+                        fabsf(vec3::dot(bY, axis)) * CAR_HALF_EX.y +
+                        fabsf(vec3::dot(bZ, axis)) * CAR_HALF_EX.z;
+
+        // Triangle vertex projections relative to box center
+        float d0 = vec3::dot(vec3::sub(v0, center), axis);
+        float d1 = vec3::dot(vec3::sub(v1, center), axis);
+        float d2 = vec3::dot(vec3::sub(v2, center), axis);
+
+        float triMin = fminf(fminf(d0, d1), d2);
+        float triMax = fmaxf(fmaxf(d0, d1), d2);
+
+        if (triMin > boxR || triMax < -boxR) separated = true;
+    };
+
+    // 3 box face normals
+    testAxis(bX);
+    testAxis(bY);
+    testAxis(bZ);
+
+    // 1 triangle normal
+    testAxis(triN);
+
+    // 9 edge cross products
+    testAxis(vec3::cross(bX, e0));
+    testAxis(vec3::cross(bX, e1));
+    testAxis(vec3::cross(bX, e2));
+    testAxis(vec3::cross(bY, e0));
+    testAxis(vec3::cross(bY, e1));
+    testAxis(vec3::cross(bY, e2));
+    testAxis(vec3::cross(bZ, e0));
+    testAxis(vec3::cross(bZ, e1));
+    testAxis(vec3::cross(bZ, e2));
+
+    if (!separated)
     {
-        int t = triBeg + localTriIdx;
-        int triIdx = __ldg(&arena->triIdx[t]);
-
-        float4 triMin = __ldg(&arena->aabbMin[triIdx]);
-        float4 triMax = __ldg(&arena->aabbMax[triIdx]);
-
-        // SAT: OBB vs Triangle (13 axes)
-        // Load triangle vertices via index buffer
-        int4 tri = arena->tris[triIdx];
-        float4 v0 = arena->verts[tri.x];
-        float4 v1 = arena->verts[tri.y];
-        float4 v2 = arena->verts[tri.z];
-
-        // Triangle edges and normal
-        float4 e0 = vec3::sub(v1, v0);
-        float4 e1 = vec3::sub(v2, v1);
-        float4 e2 = vec3::sub(v0, v2);
-        float4 triN = vec3::cross(e0, e1);
-
-        // Box axes in world space
-        float4 bX = quat::toWorld(WORLD_X, rot);
-        float4 bY = quat::toWorld(WORLD_Y, rot);
-        float4 bZ = quat::toWorld(WORLD_Z, rot);
-
-        // Box center
-        float4 center = vec3::add(pos, quat::toWorld(CAR_OFFSETS, rot));
-
-        // Test all 13 potential separating axes
-        bool separated = false;
-
-        // Helper: test one axis
-        auto testAxis = [&](float4 axis) {
-            float len2 = vec3::dot(axis, axis);
-            if (len2 < 1e-8f) return;
-
-            // Box projection radius
-            float boxR = fabsf(vec3::dot(bX, axis)) * CAR_HALF_EX.x +
-                            fabsf(vec3::dot(bY, axis)) * CAR_HALF_EX.y +
-                            fabsf(vec3::dot(bZ, axis)) * CAR_HALF_EX.z;
-
-            // Triangle vertex projections relative to box center
-            float d0 = vec3::dot(vec3::sub(v0, center), axis);
-            float d1 = vec3::dot(vec3::sub(v1, center), axis);
-            float d2 = vec3::dot(vec3::sub(v2, center), axis);
-
-            float triMin = fminf(fminf(d0, d1), d2);
-            float triMax = fmaxf(fmaxf(d0, d1), d2);
-
-            if (triMin > boxR || triMax < -boxR) separated = true;
-        };
-
-        // 3 box face normals
-        testAxis(bX);
-        testAxis(bY);
-        testAxis(bZ);
-
-        // 1 triangle normal
-        testAxis(triN);
-
-        // 9 edge cross products
-        testAxis(vec3::cross(bX, e0));
-        testAxis(vec3::cross(bX, e1));
-        testAxis(vec3::cross(bX, e2));
-        testAxis(vec3::cross(bY, e0));
-        testAxis(vec3::cross(bY, e1));
-        testAxis(vec3::cross(bY, e2));
-        testAxis(vec3::cross(bZ, e0));
-        testAxis(vec3::cross(bZ, e1));
-        testAxis(vec3::cross(bZ, e2));
-
-        if (!separated)
-        {
-            atomicAdd(space->numHit, 1);
-        }
+        atomicAdd(space->numHit, 1);
     }
 }
