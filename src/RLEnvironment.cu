@@ -24,7 +24,7 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     cudaMallocCpy(d_state, &m_state);
 
     // Allocate collision workspace
-    cudaMallocSOA(m_space, {1, cars, cars + 1, cars, cars});
+    cudaMallocSOA(m_space, {1, cars, cars + 1, cars});
     cudaMallocCpy(d_space, &m_space);
 
     // Allocate CUB temp storage
@@ -42,7 +42,7 @@ float* RLEnvironment::step()
     // Reset hit counter
     cudaMemsetAsync(m_space.numHit, 0, sizeof(int));
 
-    // Broad phase - compute cell bounds and triangle counts per car
+    // Broad phase - compute group bounds and triangle counts per car
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
 
     // Prefix sum to get offsets for thread mapping

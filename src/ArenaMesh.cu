@@ -73,11 +73,11 @@ Mesh ArenaMesh::loadMeshObj(const char* path)
 
 Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
 {
-    // Number of cells in grid
-    nCells = (int)vec3::prod(GRID_DIMS);
+    // Number of overlapping 2x2x2 groups in grid
+    nGroups = (int)vec3::prod(GROUP_DIMS);
 
-    // Tri accumulators for grid cells
-    std::vector<std::vector<int>> cells(nCells);
+    // Tri accumulators for group cells
+    std::vector<std::vector<int>> groups(nGroups);
 
     for (int i = 0; i < m.tris.size(); ++i)
     {
@@ -97,12 +97,20 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
         int3 lo = vec3::min(vec3::min(cX, cY), cZ);
         int3 hi = vec3::max(vec3::max(cX, cY), cZ);
 
-        // Iterate over potential cells
-        for (int x = lo.x; x <= hi.x; ++x)
-        for (int y = lo.y; y <= hi.y; ++y)
-        for (int z = lo.z; z <= hi.z; ++z)
+        // Convert cell bounds to overlapping 2x2x2 group bounds
+        int3 gLo = { max(0, lo.x - 1), max(0, lo.y - 1), max(0, lo.z - 1) };
+        int3 gHi = {
+            min(hi.x, GROUP_DIMS.x - 1),
+            min(hi.y, GROUP_DIMS.y - 1),
+            min(hi.z, GROUP_DIMS.z - 1)
+        };
+
+        // Iterate over potential groups
+        for (int x = gLo.x; x <= gHi.x; ++x)
+        for (int y = gLo.y; y <= gHi.y; ++y)
+        for (int z = gLo.z; z <= gHi.z; ++z)
         {
-            cells[flatCellIdx(x, y, z)].push_back(i);
+            groups[flatGroupIdx(x, y, z)].push_back(i);
         }
 
         // Pre-compute triangle normals
@@ -114,17 +122,17 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
     }
 
     // 1D grid storage via prefix sum
-    std::vector<int> triPre(nCells + 1, 0);
-    for (int i = 0; i < nCells; ++i)
+    std::vector<int> triPre(nGroups + 1, 0);
+    for (int i = 0; i < nGroups; ++i)
     {
-        triPre[i + 1] = triPre[i] + cells[i].size();
+        triPre[i + 1] = triPre[i] + groups[i].size();
     }
 
     // Construct triangle indices
     std::vector<int> triIdx(triPre.back());
-    for (int i = 0; i < nCells; ++i)
+    for (int i = 0; i < nGroups; ++i)
     {
-        std::copy(cells[i].begin(), cells[i].end(), triIdx.begin() + triPre[i]);
+        std::copy(groups[i].begin(), groups[i].end(), triIdx.begin() + triPre[i]);
     }
 
     return { triIdx, triPre };
@@ -140,8 +148,8 @@ ArenaMesh::ArenaMesh(const char* path)
     std::cout << "Loaded mesh: " << path << "\n";
     std::cout << "  Vertices:  " << nVerts << "\n";
     std::cout << "  Triangles: " << nTris << "\n";
-    std::cout << "  Grid cells: " << nCells << " ("
-              << GRID_DIMS.x << "x" << GRID_DIMS.y << "x" << GRID_DIMS.z << ")\n";
+    std::cout << "  Grid groups: " << nGroups << " ("
+              << GROUP_DIMS.x << "x" << GROUP_DIMS.y << "x" << GROUP_DIMS.z << ")\n";
     std::cout << "  Grid refs:  " << g.triIdx.size() << "\n";
 
     // Allocate/copy mesh array pointers

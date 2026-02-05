@@ -38,7 +38,7 @@ struct ArenaMesh
     // Mesh dims
     int nTris;
     int nVerts;
-    int nCells;
+    int nGroups;
 
     // Cell size
     float4 cellEx;
@@ -81,6 +81,19 @@ struct ArenaMesh
     __host__ __device__ __forceinline__ int flatCellIdx(int x, int y, int z)
     {
         return x + y * GRID_DIMS.x + z * GRID_DIMS.x * GRID_DIMS.y;
+    }
+
+    __host__ __device__ __forceinline__ int3 getGroupIdx(int3 cell)
+    {
+        int x = max(0, min(cell.x, GROUP_DIMS.x - 1));
+        int y = max(0, min(cell.y, GROUP_DIMS.y - 1));
+        int z = max(0, min(cell.z, GROUP_DIMS.z - 1));
+        return { x, y, z };
+    }
+
+    __host__ __device__ __forceinline__ int flatGroupIdx(int x, int y, int z)
+    {
+        return x + y * GROUP_DIMS.x + z * GROUP_DIMS.x * GROUP_DIMS.y;
     }
 };
 

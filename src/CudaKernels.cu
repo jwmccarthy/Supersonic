@@ -61,7 +61,7 @@ __global__ void carArenaCollisionKernel(
     int carIdx = blockIdx.x * blockDim.x + threadIdx.x;
     int totalCars = state->sims * state->nCar;
 
-    // Broad phase - compute cell bounds and triangle counts
+    // Broad phase - compute group bounds and triangle counts
     if (carIdx < totalCars)
     {
         carArenaBroadPhase(state, arena, space, carIdx);
