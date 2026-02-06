@@ -27,12 +27,25 @@ struct REFLECT Pads
     bool* isActive;
 };
 
+// Collision pair output
+struct Collision
+{
+    int carIdx;  // Flat index: sim * nCar + carInSim
+    int triIdx;  // Triangle index in arena mesh
+};
+
 struct REFLECT Workspace
 {
-    int*  numHit;   // Debug: total AABB hits
+    int*  numHit;   // Total collision count (output)
     int*  numTri;   // Per-car triangle counts (from overlapping groups)
     int*  triOff;   // Prefix sum of triCounts for thread mapping
     int4* groupIdx; // Per-car group index (w unused, for alignment)
+};
+
+struct REFLECT CollisionOutput
+{
+    int*       count;      // Atomic counter for collision pairs
+    Collision* collisions; // Output array of collision pairs
 };
 
 struct GameState

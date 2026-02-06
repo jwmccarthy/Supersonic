@@ -20,6 +20,11 @@ private:
     Workspace  m_space;
     Workspace* d_space;
 
+    // Collision output
+    CollisionOutput  m_collOut;
+    CollisionOutput* d_collOut;
+    int maxCollisions;
+
     // Buffers
     void*  d_cubBuf;
     size_t cubBytes;

@@ -56,11 +56,13 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
     space->groupIdx[carIdx] = make_int4(groupIdx.x, groupIdx.y, groupIdx.z, 0);
 }
 
-// Narrow phase: one thread per (car, triangle) pair - does AABB test
+// Narrow phase: one thread per (car, triangle) pair - SAT test
 __device__ __forceinline__ void carArenaNarrowPhase(
     GameState* state,
     ArenaMesh* arena,
     Workspace* space,
+    CollisionOutput* collOut,
+    int maxCollisions,
     int carIdx,
     int locIdx)
 {
@@ -143,7 +145,12 @@ __device__ __forceinline__ void carArenaNarrowPhase(
 
         if (!separated)
         {
-            atomicAdd(space->numHit, 1);
+            // Store collision pair
+            int pos = atomicAdd(collOut->count, 1);
+            if (pos < maxCollisions)
+            {
+                collOut->collisions[pos] = { carIdx, triIdx };
+            }
         }
     }
 }

@@ -12,9 +12,13 @@
 // Fixed temp buffer size for CUB scan (generous, avoids query overhead)
 constexpr size_t CUB_TEMP_BYTES = 1 << 20;  // 1MB
 
+// Maximum expected collisions per frame (generous upper bound)
+constexpr int MAX_COLLISIONS_PER_CAR = 32;
+
 RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     : sims(sims), numB(numB), numO(numO), seed(seed)
     , cars(sims * (numB + numO))
+    , maxCollisions(cars * MAX_COLLISIONS_PER_CAR)
     , cubBytes(CUB_TEMP_BYTES)
     , m_arena(MESH_PATH)
     , m_state(sims, numB, numO, seed)
@@ -26,6 +30,10 @@ RLEnvironment::RLEnvironment(int sims, int numB, int numO, int seed)
     // Allocate collision workspace
     cudaMallocSOA(m_space, {1, cars, cars + 1, cars});
     cudaMallocCpy(d_space, &m_space);
+
+    // Allocate collision output buffer
+    cudaMallocSOA(m_collOut, {1, maxCollisions});
+    cudaMallocCpy(d_collOut, &m_collOut);
 
     // Allocate CUB temp storage
     CUDA_CHECK(cudaMalloc(&d_cubBuf, cubBytes));
@@ -39,8 +47,8 @@ float* RLEnvironment::step()
     int blockSize = 256;
     int gridSize = (cars + blockSize - 1) / blockSize;
 
-    // Reset hit counter
-    cudaMemsetAsync(m_space.numHit, 0, sizeof(int));
+    // Reset collision counter
+    cudaMemsetAsync(m_collOut.count, 0, sizeof(int));
 
     // Broad phase - compute group bounds and triangle counts per car
     carArenaCollisionKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space);
@@ -55,7 +63,8 @@ float* RLEnvironment::step()
     if (m_tris > 0)
     {
         gridSize = (m_tris + blockSize - 1) / blockSize;
-        carArenaNarrowPhaseKernel<<<gridSize, blockSize>>>(d_state, d_arena, d_space, m_tris);
+        carArenaNarrowPhaseKernel<<<gridSize, blockSize>>>(
+            d_state, d_arena, d_space, d_collOut, maxCollisions, m_tris);
     }
 
     cudaDeviceSynchronize();
@@ -64,8 +73,8 @@ float* RLEnvironment::step()
     static int frame = 0;
     if (++frame % 1000 == 0)
     {
-        cudaMemcpy(&m_nHit, m_space.numHit, sizeof(int), cudaMemcpyDeviceToHost);
-        printf("Frame %d: tris=%d hits=%d\n", frame, m_tris, m_nHit);
+        cudaMemcpy(&m_nHit, m_collOut.count, sizeof(int), cudaMemcpyDeviceToHost);
+        printf("Frame %d: tris=%d collisions=%d\n", frame, m_tris, m_nHit);
     }
 
     return d_output;

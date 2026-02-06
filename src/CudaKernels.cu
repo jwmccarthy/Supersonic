@@ -40,6 +40,8 @@ __global__ void carArenaNarrowPhaseKernel(
     GameState* state,
     ArenaMesh* arena,
     Workspace* space,
+    CollisionOutput* collOut,
+    int maxCollisions,
     int totalTris)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -50,7 +52,7 @@ __global__ void carArenaNarrowPhaseKernel(
     int carIdx = findCarIdx(space->triOff, totalCars, tid);
     int localTriIdx = tid - space->triOff[carIdx];
 
-    carArenaNarrowPhase(state, arena, space, carIdx, localTriIdx);
+    carArenaNarrowPhase(state, arena, space, collOut, maxCollisions, carIdx, localTriIdx);
 }
 
 __global__ void carArenaCollisionKernel(
