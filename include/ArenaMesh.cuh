@@ -8,11 +8,13 @@
 
 #define MESH_PATH "./assets/pitch.obj"
 
-struct Triangle
+// Packed triangle for coalesced grid access
+struct PackedTri
 {
     float4 v0;
     float4 v1;
     float4 v2;
+    int idx;  // Original triangle index for collision output
 };
 
 struct Mesh
@@ -29,7 +31,7 @@ struct Mesh
 
 struct Grid
 {
-    std::vector<int> triIdx;
+    std::vector<PackedTri> tris;  // Actual vertex data per cell
     std::vector<int> triPre;
 };
 
@@ -52,8 +54,8 @@ struct ArenaMesh
     float4* aabbMin;
     float4* aabbMax;
 
-    // Broadphase grid
-    int* triIdx;
+    // Broadphase grid (stores actual triangle data for coalesced access)
+    PackedTri* gridTris;
     int* triPre;
 
     ArenaMesh(const char* path);

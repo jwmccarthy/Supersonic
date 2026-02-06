@@ -77,14 +77,11 @@ __device__ __forceinline__ void carArenaNarrowPhase(
 
     if (locIdx < triEnd - triBeg)
     {
-        int triIdx = __ldg(&arena->triIdx[triBeg + locIdx]);
-
-        // SAT: OBB vs Triangle (13 axes)
-        // Load triangle vertices via index buffer
-        int4 tri = arena->tris[triIdx];
-        float4 v0 = arena->verts[tri.x];
-        float4 v1 = arena->verts[tri.y];
-        float4 v2 = arena->verts[tri.z];
+        // Load triangle vertices directly (coalesced access)
+        PackedTri tri = arena->gridTris[triBeg + locIdx];
+        float4 v0 = tri.v0;
+        float4 v1 = tri.v1;
+        float4 v2 = tri.v2;
 
         // Triangle edges and normal
         float4 e0 = vec3::sub(v1, v0);
@@ -146,10 +143,10 @@ __device__ __forceinline__ void carArenaNarrowPhase(
         if (!separated)
         {
             // Store collision pair
-            int pos = atomicAdd(collOut->count, 1);
-            if (pos < maxCollisions)
+            int slot = atomicAdd(collOut->count, 1);
+            if (slot < maxCollisions)
             {
-                collOut->collisions[pos] = { carIdx, triIdx };
+                collOut->collisions[slot] = { carIdx, tri.idx };
             }
         }
     }
