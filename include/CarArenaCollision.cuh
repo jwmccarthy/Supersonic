@@ -43,15 +43,16 @@ __device__ __forceinline__ void carArenaBroadPhase(GameState* state, ArenaMesh* 
 
     auto [aabbMin, aabbMax] = getCarAABB(arena, pos, rot);
 
+    // Get flat index of group of cells containing car
     int3 cellMin = arena->getCellIdx(aabbMin);
     int3 groupIdx = arena->getGroupIdx(cellMin);
     int groupFlat = arena->flatGroupIdx(groupIdx.x, groupIdx.y, groupIdx.z);
 
     // Count total triangles in the overlapping group
-    int triCount = __ldg(&arena->triPre[groupFlat + 1]) - __ldg(&arena->triPre[groupFlat]);
+    int nTris = __ldg(&arena->triPre[groupFlat + 1]) - __ldg(&arena->triPre[groupFlat]);
 
     // Store for narrow phase
-    space->numTri[carIdx] = triCount;
+    space->numTri[carIdx] = nTris;
     space->groupIdx[carIdx] = make_int4(groupIdx.x, groupIdx.y, groupIdx.z, 0);
 }
 
@@ -61,23 +62,20 @@ __device__ __forceinline__ void carArenaNarrowPhase(
     ArenaMesh* arena,
     Workspace* space,
     int carIdx,
-    int localTriIdx)
+    int locIdx)
 {
     float4 pos = __ldg(&state->cars.position[carIdx]);
     float4 rot = __ldg(&state->cars.rotation[carIdx]);
 
     int4 groupIdx = space->groupIdx[carIdx];
     int groupFlat = arena->flatGroupIdx(groupIdx.x, groupIdx.y, groupIdx.z);
+
     int triBeg = __ldg(&arena->triPre[groupFlat]);
     int triEnd = __ldg(&arena->triPre[groupFlat + 1]);
 
-    if (localTriIdx < triEnd - triBeg)
+    if (locIdx < triEnd - triBeg)
     {
-        int t = triBeg + localTriIdx;
-        int triIdx = __ldg(&arena->triIdx[t]);
-
-        float4 triMin = __ldg(&arena->aabbMin[triIdx]);
-        float4 triMax = __ldg(&arena->aabbMax[triIdx]);
+        int triIdx = __ldg(&arena->triIdx[triBeg + locIdx]);
 
         // SAT: OBB vs Triangle (13 axes)
         // Load triangle vertices via index buffer
