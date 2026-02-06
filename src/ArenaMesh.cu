@@ -76,8 +76,8 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
     // Number of overlapping 2x2x2 groups in grid
     nGroups = (int)vec3::prod(GROUP_DIMS);
 
-    // Tri accumulators for group cells (store packed triangles directly)
-    std::vector<std::vector<PackedTri>> groups(nGroups);
+    // Tri accumulators for group cells
+    std::vector<std::vector<int>> groups(nGroups);
 
     for (int i = 0; i < m.tris.size(); ++i)
     {
@@ -101,15 +101,12 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
         int3 gLo = max({0, 0, 0}, vec3::sub(lo, vec3::sub(GROUP_SPAN, 1)));
         int3 gHi = min(hi, vec3::sub(GROUP_DIMS, 1));
 
-        // Pack triangle vertices for coalesced access
-        PackedTri packed = { v0, v1, v2, i };
-
         // Iterate over potential groups
         for (int x = gLo.x; x <= gHi.x; ++x)
         for (int y = gLo.y; y <= gHi.y; ++y)
         for (int z = gLo.z; z <= gHi.z; ++z)
         {
-            groups[flatGroupIdx(x, y, z)].push_back(packed);
+            groups[flatGroupIdx(x, y, z)].push_back(i);
         }
 
         // Pre-compute triangle normals
@@ -127,14 +124,14 @@ Grid ArenaMesh::buildBroadphaseGrid(Mesh& m)
         triPre[i + 1] = triPre[i] + groups[i].size();
     }
 
-    // Construct packed triangle array
-    std::vector<PackedTri> tris(triPre.back());
+    // Construct triangle indices
+    std::vector<int> triIdx(triPre.back());
     for (int i = 0; i < nGroups; ++i)
     {
-        std::copy(groups[i].begin(), groups[i].end(), tris.begin() + triPre[i]);
+        std::copy(groups[i].begin(), groups[i].end(), triIdx.begin() + triPre[i]);
     }
 
-    return { tris, triPre };
+    return { triIdx, triPre };
 }
 
 ArenaMesh::ArenaMesh(const char* path)
@@ -154,8 +151,8 @@ ArenaMesh::ArenaMesh(const char* path)
     cudaMallocCpy(aabbMin, m.aabbMin.data(), m.aabbMin.size());
     cudaMallocCpy(aabbMax, m.aabbMax.data(), m.aabbMax.size());
 
-    // Allocate/copy grid array pointers (packed triangles for coalesced access)
-    cudaMallocCpy(gridTris, g.tris.data(), g.tris.size());
+    // Allocate/copy grid array pointers
+    cudaMallocCpy(triIdx, g.triIdx.data(), g.triIdx.size());
     cudaMallocCpy(triPre, g.triPre.data(), g.triPre.size());
 }
 
@@ -173,5 +170,5 @@ void ArenaMesh::printMeshInfo(const char* path, const Grid& g)
               << GROUP_SPAN.x << "x" 
               << GROUP_SPAN.y << "x" 
               << GROUP_SPAN.z << "\n";
-    std::cout << "  Grid refs:   " << g.tris.size() << "\n";
+    std::cout << "  Grid refs:   " << g.triIdx.size() << "\n";
 }

@@ -108,7 +108,7 @@ __host__ __device__ constexpr float4 ARENA_MIN = { -6000.f, -4108.f,  -14.f, 0.f
 __host__ __device__ constexpr float4 ARENA_MAX = {  6000.f,  4108.f, 2076.f, 0.f };
 
 // Arena grid
-__host__ __device__ constexpr int3   GRID_DIMS = { 48, 48, 12 };
+__host__ __device__ constexpr int3   GRID_DIMS = { 48, 48, 16 };
 __host__ __device__ constexpr float4 CELL_SIZE = {
     (ARENA_MAX.x - ARENA_MIN.x) / (float)GRID_DIMS.x,
     (ARENA_MAX.y - ARENA_MIN.y) / (float)GRID_DIMS.y,
