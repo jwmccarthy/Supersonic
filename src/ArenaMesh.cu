@@ -173,5 +173,5 @@ void ArenaMesh::printMeshInfo(const char* path, const Grid& g)
               << GROUP_SPAN.x << "x" 
               << GROUP_SPAN.y << "x" 
               << GROUP_SPAN.z << "\n";
-    std::cout << "  Grid refs:   " << g.triIdx.size() << "\n";
+    std::cout << "  Grid refs:   " << g.tris.size() << "\n";
 }
